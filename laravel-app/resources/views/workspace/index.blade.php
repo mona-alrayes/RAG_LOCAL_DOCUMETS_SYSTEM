@@ -225,7 +225,7 @@
                                         </a>
 
                                         <p class="mt-1 break-words text-xs leading-5 text-red-200">
-                                            {{ __('documents.failure.processing_failed') }}
+                                            {{ $document->failureMessage() }}
                                         </p>
                                     </div>
                                 </div>

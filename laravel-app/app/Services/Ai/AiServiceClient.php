@@ -379,10 +379,13 @@ class AiServiceClient
     ): AiServiceException {
         $payload = $response->json();
 
-        $message = is_array($payload)
+        $rawMessage = is_array($payload)
             ? data_get($payload, 'error.message')
             ?? data_get($payload, 'detail')
-            ?? 'AI service request failed.'
+            : null;
+
+        $message = is_string($rawMessage) && trim($rawMessage) !== ''
+            ? $rawMessage
             : 'AI service request failed.';
 
         $errorCode = is_array($payload)
@@ -390,7 +393,7 @@ class AiServiceClient
             : null;
 
         return new AiServiceException(
-            message: (string) $message,
+            message: $message,
             statusCode: $response->status(),
             correlationId: $this->correlationId(
                 response: $response,

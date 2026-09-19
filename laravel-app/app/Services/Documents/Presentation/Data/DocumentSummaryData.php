@@ -84,5 +84,17 @@ final readonly class DocumentSummaryData
 
         /** Document last update timestamp. */
         public CarbonInterface $updatedAt,
+        public ?string $failureCode = null,
     ) {}
+
+    public function failureMessage(): string
+    {
+        $key = in_array($this->failureCode, [
+            'local_resource_exhausted', 'local_resource_telemetry_unavailable',
+            'document_parsing_outcome_unknown', 'document_parsing_checkpoint_invalid',
+            'document_parsing_failed', 'document_parsing_empty', 'dense_embedding_failed',
+        ], true) ? $this->failureCode : 'processing_failed';
+
+        return __('documents.failure.'.$key);
+    }
 }

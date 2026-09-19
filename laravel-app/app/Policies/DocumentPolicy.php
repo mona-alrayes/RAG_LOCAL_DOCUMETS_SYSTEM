@@ -79,6 +79,7 @@ class DocumentPolicy
      */
     public function download(User $user, Document $document): bool
     {
-        return $user->id === $document->user_id;
+        return $user->id === $document->user_id
+            && $document->deletion_started_at === null;
     }
 }

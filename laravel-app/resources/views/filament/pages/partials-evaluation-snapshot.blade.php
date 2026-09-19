@@ -6,16 +6,43 @@
     <div class="evaluation-snapshot" dir="rtl">
         <div class="snapshot-pipeline">
             <span class="snapshot-eyebrow">مسار الاسترجاع</span>
-            <div class="snapshot-stages" dir="ltr" aria-label="Dense and Sparse retrieval, RRF fusion, then reranking">
+            <div class="snapshot-stages" dir="ltr" aria-label="{{ $snapshot['pipeline'] }}">
+                @if($snapshot['pipeline'] === 'dense_sparse_rrf_reranker')
                 <span>Dense + Sparse</span><span class="snapshot-arrow" aria-hidden="true">→</span>
                 <span>RRF Fusion</span><span class="snapshot-arrow" aria-hidden="true">→</span>
                 <span>Reranker</span>
+                @else
+                    <span>{{ $snapshot['pipeline'] }}</span>
+                @endif
             </div>
         </div>
         <div class="snapshot-facts">
-            <div><span>النتائج المسترجعة</span><strong dir="ltr">Top {{ $snapshot['k'] }}</strong></div>
-            <div><span>معامل دمج الرتب</span><strong dir="ltr">RRF {{ $snapshot['fusion_rrf_k'] }}</strong></div>
-            <div><span>المرشّحون لكل وثيقة</span><strong>{{ $snapshot['k'] * $snapshot['candidate_multiplier'] }}</strong></div>
+            <div>
+                <span>النتائج المسترجعة</span>
+                <strong dir="ltr">Top {{ $snapshot['k'] }}</strong>
+            </div>
+
+            <div>
+                <span>معامل مرشحي RRF</span>
+                <strong dir="ltr">
+                    @if($snapshot['rrf_candidate_multiplier'] !== null)
+                        ×{{ $snapshot['rrf_candidate_multiplier'] }}
+                    @else
+                        —
+                    @endif
+                </strong>
+            </div>
+
+            <div>
+                <span>معامل مرشحي إعادة الترتيب</span>
+                <strong dir="ltr">
+                    @if($snapshot['rerank_candidate_multiplier'] !== null)
+                        ×{{ $snapshot['rerank_candidate_multiplier'] }}
+                    @else
+                        —
+                    @endif
+                </strong>
+            </div>
         </div>
         <div class="snapshot-models">
             @foreach(['cloud' => ['Cloud', 'سحابي'], 'hybrid_local' => ['Hybrid Local', 'محلي']] as $profile => [$name, $label])
@@ -35,7 +62,10 @@
             <summary>التفاصيل التقنية وإصدار المقاييس</summary>
             <dl>
                 @foreach($snapshot as $key => $value)
-                    <div><dt dir="ltr">{{ $key }}</dt><dd dir="ltr">{{ $value }}</dd></div>
+                    <div>
+                        <dt dir="ltr">{{ $key }}</dt>
+                        <dd dir="ltr">{{ $value === null ? '—' : $value }}</dd>
+                    </div>
                 @endforeach
             </dl>
         </details>

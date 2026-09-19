@@ -115,6 +115,10 @@ class HuggingFaceLLMProvider(LLMProvider):
     ) -> str | None:
         choices = getattr(chunk, "choices", None)
 
+        # Some inference providers end with a usage-only chunk after all text.
+        if choices == [] and getattr(chunk, "usage", None) is not None:
+            return None
+
         if (
             not isinstance(choices, list)
             or not choices

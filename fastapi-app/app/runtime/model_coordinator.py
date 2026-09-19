@@ -112,6 +112,17 @@ class LocalModelCoordinator:
         with self._state_lock:
             return self._last_metrics
 
+    def preflight(self, model_id: str) -> None:
+        """Check admission without loading weights; lease rechecks after parsing."""
+        with self._gate:
+            if self._memory_policy is not None:
+                for cached_id in list(self._warm_resources):
+                    if cached_id != model_id:
+                        self._release_warm_resource(cached_id)
+                self._memory_policy.prepare(model_id, self._resource_snapshot)
+            self._release_warm_models_until_memory_available()
+            self._ensure_memory_available(self._resource_snapshot())
+
     @contextmanager
     def lease(
         self,

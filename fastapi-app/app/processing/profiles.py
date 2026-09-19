@@ -7,7 +7,6 @@ from app.parsing.normalized import NormalizedDocument
 from app.processing.base import BaseProcessingProfile, ProcessingProfile
 from app.processing.chunks import NormalizedChunk
 
-
 SparseRepresentations = (
     list[models.Document]
     | list[models.SparseVector]
@@ -46,11 +45,17 @@ class ExecutableProcessingProfile(BaseProcessingProfile):
         chunker: Chunker,
         dense_embedder: DenseEmbedder,
         sparse_representer_factory: Callable[[], SparseRepresenter],
+        preflight: Callable[[], None] | None = None,
     ) -> None:
         self._profile = profile
         self._chunker = chunker
         self._dense_embedder = dense_embedder
         self._sparse_representer_factory = sparse_representer_factory
+        self._preflight = preflight
+
+    def preflight(self) -> None:
+        if self._preflight is not None:
+            self._preflight()
 
     @property
     def profile(self) -> ProcessingProfile:

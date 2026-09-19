@@ -20,6 +20,8 @@ class ChunkResource extends ReadOnlyAdminResource
 
     protected static ?string $pluralModelLabel = 'Chunks';
 
+    protected static ?string $modelLabel = 'Chunk';
+
     protected static string|\BackedEnum|null $navigationIcon = 'heroicon-o-squares-2x2';
 
     protected static ?int $navigationSort = 2;

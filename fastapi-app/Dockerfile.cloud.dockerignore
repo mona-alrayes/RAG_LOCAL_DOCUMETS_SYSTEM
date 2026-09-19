@@ -1,0 +1,7 @@
+# Allowlist prevents .env, virtualenvs, local caches and model weights entering context.
+**
+!pyproject.toml
+!app/
+!app/**
+app/**/__pycache__/
+app/**/*.pyc

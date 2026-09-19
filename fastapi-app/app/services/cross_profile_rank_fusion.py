@@ -7,9 +7,6 @@ from app.services.hybrid_local_retrieval import (
     HybridLocalRetrievalResult,
 )
 
-
-CROSS_PROFILE_RRF_K = 60
-
 RetrievalResult = (
     CloudRetrievalResult
     | HybridLocalRetrievalResult
@@ -24,6 +21,13 @@ CandidateIdentity = tuple[
 
 
 class CrossProfileRankFusionService:
+    def __init__(
+        self,
+        *,
+        rrf_k: int,
+    ) -> None:
+        self._rrf_k = rrf_k
+
     def fuse(
         self,
         *,
@@ -97,7 +101,7 @@ class CrossProfileRankFusionService:
                 fusion_score = (
                     1.0
                     / (
-                        CROSS_PROFILE_RRF_K
+                        self._rrf_k
                         + rank
                     )
                 )

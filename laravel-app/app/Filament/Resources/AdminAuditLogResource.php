@@ -14,6 +14,12 @@ class AdminAuditLogResource extends ReadOnlyAdminResource
 {
     protected static ?string $model = AdminAuditLog::class;
 
+    protected static ?string $pluralModelLabel = 'سجل الإدارة';
+
+    protected static ?string $modelLabel = 'سجل إداري';
+
+    protected static ?string $navigationLabel = 'سجل الإدارة';
+
     protected static ?string $slug = 'audit-logs';
 
     public static function table(Table $table): Table

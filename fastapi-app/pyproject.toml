@@ -27,3 +27,7 @@ local-native = [
     "fastembed==0.8.0",
     "torch==2.13.0",
 ]
+test = [
+    "pytest==9.1.1",
+    "httpx2==2.12.0",
+]

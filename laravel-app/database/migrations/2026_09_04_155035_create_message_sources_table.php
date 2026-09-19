@@ -26,6 +26,7 @@ return new class extends Migration
             $table->json('source_snapshot');
 
             $table->double('relevance_score')->nullable();
+            $table->double('reranker_score')->nullable();
 
             $table->timestamps();
 

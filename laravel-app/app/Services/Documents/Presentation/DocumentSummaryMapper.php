@@ -92,6 +92,7 @@ final class DocumentSummaryMapper
             reprocessingInProgress: $reprocessingInProgress,
             pollRequired: $pollRequired,
             safeFailure: $this->safeFailure($latestAttempt),
+            failureCode: $latestAttempt?->error_code,
 
             /*
              * هذه القيم تصف availability من منظور العرض حاليًا.

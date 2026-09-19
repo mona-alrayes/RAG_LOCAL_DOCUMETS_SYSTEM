@@ -15,6 +15,11 @@ class ProcessingRunFailureClassifier
      * @var list<string>
      */
     private const TERMINAL_ERROR_CODES = [
+        'local_resource_exhausted',
+        'local_resource_telemetry_unavailable',
+        'document_parsing_outcome_unknown',
+        'document_parsing_checkpoint_invalid',
+        'document_parsing_empty',
         'invalid_processing_profile',
         'processing_profile_not_registered',
         'document_loader_not_registered',
@@ -97,6 +102,21 @@ class ProcessingRunFailureClassifier
     public function terminalFailureReason(Throwable $exception): string
     {
         if ($exception instanceof AiServiceException) {
+            $reason = match ($exception->errorCode) {
+                'local_resource_exhausted' => 'Insufficient local memory. Free memory before retrying.',
+                'local_resource_telemetry_unavailable' => 'Local memory state could not be checked. Check the local runtime before retrying.',
+                'document_parsing_outcome_unknown' => 'Previous parsing outcome is unknown. Check LlamaParse before resubmitting to avoid duplicate usage.',
+                'document_parsing_checkpoint_invalid' => 'Saved parsing state could not be read. Check the processing service storage.',
+                'document_parsing_failed' => 'External document parsing failed. Check the provider and service logs.',
+                'document_parsing_empty' => 'The document parser returned no pages.',
+                'dense_embedding_failed' => 'Document reading completed, but embedding failed.',
+                'qdrant_indexing_failed' => 'Document indexing failed. Check the vector database.',
+                default => null,
+            };
+            if ($reason !== null) {
+                return $reason;
+            }
+
             return match ($exception->statusCode) {
                 400, 422 => 'The document processing request was rejected.',
                 401, 403 => 'The AI service rejected the processing request.',

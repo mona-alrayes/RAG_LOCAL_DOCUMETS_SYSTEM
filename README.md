@@ -216,9 +216,9 @@ QDRANT_URL=http://127.0.0.1:6333
 LLAMA_CLOUD_API_KEY=YOUR_LLAMA_CLOUD_KEY
 RAG_GENERATION_PROFILE=hybrid_local
 
-OLLAMA_BASE_URL=http://127.0.0.1:11435
+OLLAMA_BASE_URL=http://127.0.0.1:11434
 LOCAL_LLM_MODEL=qwen3.5:4b
-OLLAMA_KEEP_ALIVE=5m
+OLLAMA_KEEP_ALIVE=0
 LOCAL_LLM_NUM_CTX=8192
 RAG_GENERATION_MAX_TOKENS=768
 ```
@@ -247,7 +247,7 @@ RAG_GENERATION_MAX_TOKENS=768
 
 LlamaParse مطلوب لمعالجة الملفات في كلا المسارين. Jina وHugging Face مطلوبان للمسار السحابي. لا تحتاج شراء مفتاح من OpenAI لتشغيل الإعداد الحالي.
 
-**إذا أردت المسار السحابي بدلاً من المحلي:** اضبط `RAG_DEPLOYMENT_MODE=cloud` و`RAG_GENERATION_PROFILE=cloud`، وأضف المفاتيح الثلاثة، ثم **احذف أو علّق `LOCAL_AI_TOPOLOGY`**. لا تحتاج Ollama، ويمكن تثبيت Python بـ`python -m pip install -e .` دون `local-native`. تبقى بقية الخدمات وقيم الاتصال مطلوبة.
+**إذا أردت المسار السحابي بدلاً من المحلي:** اضبط `RAG_DEPLOYMENT_MODE=cloud` و`RAG_GENERATION_PROFILE=cloud`، وأضف المفاتيح الثلاثة، ثم **احذف أو علّق `LOCAL_AI_TOPOLOGY`**. لا تحتاج Ollama، ويمكن تثبيت Python بـ`pip install -e .` دون `local-native`. تبقى بقية الخدمات وقيم الاتصال مطلوبة.
 
 ## 7. تشغيل Ollama والنموذج المحلي
 
@@ -262,7 +262,7 @@ LlamaParse مطلوب لمعالجة الملفات في كلا المسارين
 **Windows — PowerShell:**
 
 ```powershell
-$env:OLLAMA_HOST = '127.0.0.1:11435'
+$env:OLLAMA_HOST = '127.0.0.1:11434'
 $env:OLLAMA_NUM_PARALLEL = '1'
 $env:OLLAMA_MAX_LOADED_MODELS = '1'
 $env:OLLAMA_FLASH_ATTENTION = '1'
@@ -276,13 +276,13 @@ ollama serve
 **Mac:**
 
 ```sh
-OLLAMA_HOST=127.0.0.1:11435 ollama pull qwen3.5:4b
+OLLAMA_HOST=127.0.0.1:11434 ollama pull qwen3.5:4b
 ```
 
 **Windows:**
 
 ```powershell
-$env:OLLAMA_HOST = '127.0.0.1:11435'
+$env:OLLAMA_HOST = '127.0.0.1:11434'
 ollama pull qwen3.5:4b
 ```
 
@@ -351,7 +351,7 @@ php artisan queue:restart
 
 **ملاحظة الإعداد الحالي:** عند مراجعة ملفات البيئة كانت قيمة البريد `MAIL_MAILER=log`، أي تسجل الرسائل ولا ترسلها إلى Gmail. يلزم إدخال حسابك وApp Password وتغييرها إلى `smtp` لتفعيل الإرسال الحقيقي. لا توجد بيانات Gmail شخصية في ملفات المثال.
 
-### اختبار التفعيل
+### التحقق من التفعيل
 
 1. افتح `http://rag.test/register` وسجّل حساباً ببريد تستطيع قراءته.
 2. افتح رسالة التفعيل في Inbox أو Spam.
@@ -379,6 +379,45 @@ python -m uvicorn app.main:app --host 127.0.0.1 --port 8001
 
 شغّل نسخة واحدة من FastAPI؛ لا تستخدم عدة workers للنماذج المحلية.
 
+### تشغيل التقييم على جهاز بذاكرة 16 GB
+
+عند تشغيل تقييم RAG كامل باستخدام النماذج المحلية على جهاز بذاكرة **16 GB**، قد يوقف FastAPI بعض الأسئلة بالخطأ `local_resource_exhausted` بسبب سياسة حماية الذاكرة قبل بدء مرحلة embedding أو reranking أو generation، حتى لو كان الجهاز قادراً عملياً على تنفيذ المرحلة.
+
+لأغراض **التقييم والـbenchmark فقط** يمكن تشغيل FastAPI مؤقتاً بحدود ذاكرة أخف:
+
+**macOS / Linux:**
+
+```sh
+LOCAL_MIN_AVAILABLE_MEMORY_RATIO=0.05 \
+LOCAL_SYSTEM_RESERVE_GIB=1 \
+LOCAL_EMBEDDING_HEADROOM_GIB=0.5 \
+LOCAL_RERANKER_HEADROOM_GIB=0.5 \
+LOCAL_LLM_HEADROOM_GIB=1 \
+.venv/bin/uvicorn app.main:app --host 127.0.0.1 --port 8001 --workers 1
+```
+
+هذه المتغيرات تطبق على عملية FastAPI الحالية فقط، ولا تعدّل ملف `.env`. بعد إيقاف العملية وتشغيل FastAPI بالطريقة العادية تعود إعدادات `.env` المعتادة.
+
+**Windows PowerShell:**
+
+```powershell
+$env:LOCAL_MIN_AVAILABLE_MEMORY_RATIO="0.05"
+$env:LOCAL_SYSTEM_RESERVE_GIB="1"
+$env:LOCAL_EMBEDDING_HEADROOM_GIB="0.5"
+$env:LOCAL_RERANKER_HEADROOM_GIB="0.5"
+$env:LOCAL_LLM_HEADROOM_GIB="1"
+
+.\.venv\Scripts\python.exe -m uvicorn app.main:app --host 127.0.0.1 --port 8001 --workers 1
+```
+
+بعد انتهاء التقييم، أغلق جلسة PowerShell أو احذف القيم المؤقتة قبل تشغيل FastAPI بالإعدادات العادية:
+
+```powershell
+Remove-Item Env:LOCAL_MIN_AVAILABLE_MEMORY_RATIO, Env:LOCAL_SYSTEM_RESERVE_GIB, Env:LOCAL_EMBEDDING_HEADROOM_GIB, Env:LOCAL_RERANKER_HEADROOM_GIB, Env:LOCAL_LLM_HEADROOM_GIB
+```
+
+> **مهم:** هذه الإعدادات لا تقلل استهلاك RAM الفعلي للنماذج؛ هي فقط تخفف شروط **memory admission / headroom** التي تمنع بدء مرحلة الاستدلال عندما تعتبر الذاكرة المتاحة أقل من الحد الآمن. لذلك تستخدم عند إجراء التقييم على أجهزة محدودة الذاكرة، وليست قيماً افتراضية موصى بها للإنتاج. يفضّل أيضاً إغلاق التطبيقات الثقيلة أثناء التقييم.
+
 افتح **http://rag.test**، سجّل حساباً وفعّل بريده. لمنح حسابك صلاحية لوحة الإدارة، من `laravel-app`:
 
 ```sh
@@ -394,7 +433,7 @@ php artisan rag:admin your-account@gmail.com
 3. افتح محادثة وحدد الوثيقة واسأل عن معلومة فيها.
 4. راجع الإجابة والمصادر المعروضة.
 
-من لوحة التقييم يمكن تنزيل قالب dataset ورفعه بصيغة **Excel `.xlsx` أو JSON**، حتى 100 سؤال / 1 MiB. استخدم أرقام الوثائق والمقاطع الفعلية. المقاييس المنفذة هنا تقيس **الاسترجاع**: Precision، Recall، Hit Rate، MRR وnDCG عند K؛ وجود إجابة مرجعية لا يعني احتساب Faithfulness أو Correctness تلقائياً.
+من لوحة التقييم يمكن تنزيل قالب Golden Dataset ورفعه بصيغة **Excel `.xlsx` فقط**، حتى 100 سؤال / 1 MiB. يدعم التقييم مقارنة مسارات الاسترجاع وقياس **Precision، Recall، Hit Rate، MRR وnDCG عند K**، إضافة إلى مقاييس جودة الإجابة **Correctness، Faithfulness وAnswer Relevance**، و**Abstention Accuracy** للأسئلة غير القابلة للإجابة.
 
 ## 10. التشغيل اليومي والإيقاف
 
@@ -402,7 +441,7 @@ php artisan rag:admin your-account@gmail.com
 
 1. افتح Herd وDocker Desktop.
 2. من `laravel-app` شغّل `docker compose up -d`.
-3. شغّل Ollama ثم FastAPI بالأوامر السابقة للمسار المحلي؛ السحابي يحتاج FastAPI فقط.
+3. شغّل Ollama عبر `scripts/run-local-ollama.sh` ثم FastAPI للمسار المحلي؛ المسار السحابي يحتاج FastAPI فقط.
 4. افتح `http://rag.test`.
 
 لا تحتاج إعادة تنزيل النماذج أو تشغيل migrations يومياً. لتطوير الواجهة شغّل `npm run dev` من `laravel-app`؛ للتشغيل العادي يكفي `npm run build` بعد تعديل ملفات الواجهة.
@@ -426,7 +465,7 @@ docker compose stop
 | FastAPI يعيد 401 | طابق المفتاحين؛ حتى health يحتاج `X-Internal-API-Key` |
 | `local_resource_exhausted` | أغلق التطبيقات الثقيلة؛ RAM المتاحة لا تكفي للمرحلة التالية |
 | `local_prompt_too_large` | تحقق من tokenizer المطابق وقلل نطاق السؤال/الوثائق |
-| Ollama لا يجد النموذج | تأكد أنك حمّلته للخادم على 11435 وأن الاسم مطابق |
+| Ollama لا يجد النموذج | تأكد أنك حمّلته لخادم Ollama على 11434 وأن الاسم مطابق |
 | العامل لا يصل إلى FastAPI | Compose يستخدم `host.docker.internal:8001`؛ افحص Docker وجدار الحماية، ولا تغيّر العنوان عشوائياً |
 | تغيّرت `.env` ولم تتطبق | أعد تشغيل FastAPI، واستخدم `php artisan config:clear` لـLaravel |
 

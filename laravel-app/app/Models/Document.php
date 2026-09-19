@@ -40,6 +40,7 @@ class Document extends Model
         return [
             'file_type' => FileType::class,
             'status' => DocumentStatus::class,
+            'deletion_started_at' => 'datetime',
         ];
     }
 

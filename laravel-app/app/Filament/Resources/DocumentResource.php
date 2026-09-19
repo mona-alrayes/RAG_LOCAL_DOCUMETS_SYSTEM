@@ -28,6 +28,12 @@ class DocumentResource extends ReadOnlyAdminResource
 {
     protected static ?string $model = Document::class;
 
+    protected static ?string $pluralModelLabel = 'الملفات';
+
+    protected static ?string $modelLabel = 'ملف';
+
+    protected static ?string $navigationLabel = 'الملفات';
+
     protected static ?string $slug = 'documents';
 
     public static function table(Table $table): Table

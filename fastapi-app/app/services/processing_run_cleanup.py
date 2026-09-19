@@ -7,6 +7,7 @@ from app.infrastructure.qdrant.persistence import (
     count_points,
     delete_points,
 )
+from app.parsing.checkpoint import ParseCheckpointStore
 from app.processing.indexing import resolve_qdrant_collection
 from app.schemas.documents import (
     DeleteProcessingRunPointsRequest,
@@ -20,9 +21,11 @@ class ProcessingRunPointsCleanupService:
         *,
         settings: Settings,
         client: QdrantClient,
+        parse_checkpoints: ParseCheckpointStore | None = None,
     ) -> None:
         self._settings = settings
         self._client = client
+        self._parse_checkpoints = parse_checkpoints
 
     def delete(
         self,
@@ -63,6 +66,10 @@ class ProcessingRunPointsCleanupService:
                 code="qdrant_cleanup_count_mismatch",
                 message="Processing run points remain after cleanup.",
             )
+
+        if self._parse_checkpoints is not None:
+            self._parse_checkpoints.delete_run(user_id=request.user_id,
+                document_id=request.document_id, run_id=request.processing_run_id)
 
         return DeleteProcessingRunPointsResponse(
             document_id=request.document_id,

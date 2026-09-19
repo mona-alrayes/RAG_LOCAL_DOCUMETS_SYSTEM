@@ -37,6 +37,13 @@ return [
     ],
 
     'failure' => [
+        'local_resource_exhausted' => 'الذاكرة المحلية غير كافية. حرّر بعض الذاكرة قبل إعادة المحاولة.',
+        'local_resource_telemetry_unavailable' => 'تعذر فحص الذاكرة المحلية. تحقق من خدمة المعالجة.',
+        'document_parsing_outcome_unknown' => 'نتيجة القراءة السابقة غير مؤكدة. تحقق من LlamaParse قبل إعادة الإرسال لتجنب استهلاك مكرر.',
+        'document_parsing_checkpoint_invalid' => 'تعذر قراءة النتيجة المحفوظة. تحقق من تخزين خدمة المعالجة.',
+        'document_parsing_failed' => 'فشلت قراءة الوثيقة خارجياً. تحقق من مزود القراءة وسجلات الخدمة.',
+        'document_parsing_empty' => 'لم يُرجع مزود القراءة أي صفحات.',
+        'dense_embedding_failed' => 'اكتملت قراءة الوثيقة، لكن فشلت معالجة التضمين.',
         'processing_failed' => 'تعذر إكمال معالجة الوثيقة. يمكنك المحاولة مرة أخرى.',
     ],
 

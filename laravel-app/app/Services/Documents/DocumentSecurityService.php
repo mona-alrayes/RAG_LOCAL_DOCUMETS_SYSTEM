@@ -63,24 +63,10 @@ class DocumentSecurityService
                 default => DocumentSecurityScanStatus::ScanFailed,
             };
 
-            $output = str_replace(
-                [$filePath, $signatureDir],
-                [basename($filePath), basename($signatureDir)],
-                trim($process->getOutput()),
-            );
-
-            $errorOutput = str_replace(
-                [$filePath, $signatureDir],
-                [basename($filePath), basename($signatureDir)],
-                trim($process->getErrorOutput()),
-            );
-
             $context = [
                 'file' => basename($filePath),
                 'result' => $result->value,
                 'exit_code' => $process->getExitCode(),
-                'summary' => $output,
-                'stderr' => $errorOutput !== '' ? $errorOutput : null,
             ];
 
             match ($result) {
@@ -96,11 +82,6 @@ class DocumentSecurityService
             Log::error('ClamAV document scan failed unexpectedly.', [
                 'file' => basename($filePath),
                 'exception' => $exception::class,
-                'message' => str_replace(
-                    [$filePath, $signatureDir],
-                    [basename($filePath), basename($signatureDir)],
-                    $exception->getMessage(),
-                ),
             ]);
 
             return DocumentSecurityScanStatus::ScanFailed;
@@ -113,7 +94,6 @@ class DocumentSecurityService
                         'Failed to release local heavy-resource lock after ClamAV scan.',
                         [
                             'exception' => $exception::class,
-                            'message' => $exception->getMessage(),
                         ],
                     );
                 }

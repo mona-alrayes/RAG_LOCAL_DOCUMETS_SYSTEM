@@ -1,0 +1,16 @@
+FROM python:3.12-slim
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PIP_NO_CACHE_DIR=1 \
+    RAG_DEPLOYMENT_MODE=cloud
+WORKDIR /app
+# Install only the base cloud dependencies; never the local-native extra.
+COPY pyproject.toml ./
+COPY app ./app
+RUN pip install . && useradd --create-home --uid 10001 rag \
+    && mkdir -p /app/.cache/parse-checkpoints \
+    && chown -R rag:rag /app/.cache && chmod 700 /app/.cache
+USER rag
+EXPOSE 8000
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "1"]

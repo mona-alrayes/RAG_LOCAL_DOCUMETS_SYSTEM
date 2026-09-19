@@ -182,7 +182,7 @@ final class AskConversationService
                     'Failed to persist safe conversation answer failure state.',
                     [
                         'assistant_message_id' => $assistant->getKey(),
-                        'exception' => $failurePersistenceException,
+                        'exception' => $failurePersistenceException::class,
                     ],
                 );
             }
@@ -197,7 +197,7 @@ final class AskConversationService
                     'Failed to publish conversation answer failure event.',
                     [
                         'assistant_message_id' => $assistant->getKey(),
-                        'exception' => $streamException,
+                        'exception' => $streamException::class,
                     ],
                 );
             }
@@ -219,7 +219,7 @@ final class AskConversationService
                 'Failed to publish conversation answer completion event.',
                 [
                     'assistant_message_id' => $assistant->getKey(),
-                    'exception' => $streamException,
+                    'exception' => $streamException::class,
                 ],
             );
         }

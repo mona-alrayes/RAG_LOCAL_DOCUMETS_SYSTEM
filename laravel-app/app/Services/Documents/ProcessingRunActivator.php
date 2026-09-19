@@ -25,6 +25,10 @@ class ProcessingRunActivator
                     ->lockForUpdate()
                     ->findOrFail($documentId);
 
+                if ($document->deletion_started_at !== null) {
+                    throw new LogicException('Document deletion is in progress.');
+                }
+
                 $lockedProcessingRun = ProcessingRun::query()
                     ->lockForUpdate()
                     ->findOrFail($processingRunId);
@@ -61,6 +65,10 @@ class ProcessingRunActivator
                         throw new LogicException(
                             'Document active processing run is invalid.',
                         );
+                    }
+
+                    if ((int) $previousProcessingRun->getKey() > $processingRunId) {
+                        throw new LogicException('A newer processing run is already active.');
                     }
 
                     if (

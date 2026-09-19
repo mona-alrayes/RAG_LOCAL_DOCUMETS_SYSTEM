@@ -33,6 +33,13 @@ return [
     ],
 
     'failure' => [
+        'local_resource_exhausted' => 'Insufficient local memory. Free memory before retrying.',
+        'local_resource_telemetry_unavailable' => 'Local memory could not be checked. Check the processing service.',
+        'document_parsing_outcome_unknown' => 'Previous parsing outcome is unknown. Check LlamaParse before resubmitting to avoid duplicate usage.',
+        'document_parsing_checkpoint_invalid' => 'Saved parsing state could not be read. Check processing service storage.',
+        'document_parsing_failed' => 'External document parsing failed. Check the provider and service logs.',
+        'document_parsing_empty' => 'The parser returned no pages.',
+        'dense_embedding_failed' => 'Document reading completed, but embedding failed.',
         'processing_failed' => 'Document processing could not be completed. You can try again.',
     ],
 

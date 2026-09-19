@@ -5,6 +5,7 @@ from app.core.exceptions import ApplicationException
 from app.infrastructure.qdrant.client import build_qdrant_client
 from app.infrastructure.qdrant.indexer import QdrantDocumentIndexer
 from app.parsing.base import BaseDocumentLoader
+from app.parsing.checkpoint import ParseCheckpointStore
 from app.parsing.docx import DocxDocumentLoader
 from app.parsing.pdf import PdfDocumentLoader
 from app.parsing.providers.llamaparse import (
@@ -39,6 +40,7 @@ def get_process_document_service() -> Iterator[ProcessDocumentService]:
 
     try:
         yield ProcessDocumentService(
+            parse_checkpoints=ParseCheckpointStore(settings.parse_checkpoint_dir),
             settings=settings,
             loaders=_build_loaders(settings),
             profile_registry=_build_profile_registry(settings),
@@ -58,6 +60,7 @@ def get_processing_run_points_cleanup_service(
 
     try:
         yield ProcessingRunPointsCleanupService(
+            parse_checkpoints=ParseCheckpointStore(settings.parse_checkpoint_dir),
             settings=settings,
             client=qdrant_client,
         )
@@ -84,6 +87,8 @@ def _build_loaders(
 
     provider = LlamaParseProvider(
         api_key=api_key.get_secret_value(),
+        upload_timeout_seconds=settings.llamaparse_upload_timeout_seconds,
+        parse_timeout_seconds=settings.llamaparse_parse_timeout_seconds,
     )
 
     return {
@@ -161,4 +166,5 @@ def _build_local_profile(
             coordinator=coordinator,
         ),
         sparse_representer_factory=LocalBm25Representer,
+        preflight=lambda: coordinator.preflight(settings.local_embed_model),
     )

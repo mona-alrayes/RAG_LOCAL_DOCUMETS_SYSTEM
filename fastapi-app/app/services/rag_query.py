@@ -43,6 +43,7 @@ from app.services.prompt import BuiltPrompt, PromptBuilder
 from app.services.retrieval_observability import (
     RetrievalStageTimings,
 )
+from app.services.retrieval_pipeline import RetrievalPipeline
 
 LocalRetrievalFactory = Callable[
     [],
@@ -80,7 +81,6 @@ class RagQueryService:
         prompt_builder: PromptBuilder,
         fusion_service: CrossProfileRankFusionService,
         provider_resolver: ProviderResolver,
-        top_k: int = 5,
     ) -> None:
         self._settings = settings
         self._cloud_retrieval = cloud_retrieval
@@ -89,24 +89,61 @@ class RagQueryService:
         self._prompt_builder = prompt_builder
         self._fusion_service = fusion_service
         self._provider_resolver = provider_resolver
-        self._top_k = top_k
+        self._top_k = (
+            settings.rag_retrieval_top_k
+        )
 
     def prepare(
         self,
         request: RagQueryRequest,
+    ) -> PreparedRagQuery:
+        return self._prepare(
+            request,
+            top_k=self._top_k,
+            pipeline=RetrievalPipeline.FULL,
+        )
+
+    def prepare_for_evaluation(
+        self,
+        request: RagQueryRequest,
+        *,
+        k: int,
+        pipeline: RetrievalPipeline,
+    ) -> PreparedRagQuery:
+        if not 1 <= k <= 20:
+            raise ValueError(
+                "Evaluation k must be between 1 and 20."
+            )
+
+        return self._prepare(
+            request,
+            top_k=k,
+            pipeline=pipeline,
+        )
+
+    def _prepare(
+        self,
+        request: RagQueryRequest,
+        *,
+        top_k: int,
+        pipeline: RetrievalPipeline,
     ) -> PreparedRagQuery:
         started_at = perf_counter()
 
         (
             ranked_collections,
             retrieval_timings,
-        ) = self._retrieve(request)
+        ) = self._retrieve(
+            request,
+            top_k=top_k,
+            pipeline=pipeline,
+        )
 
         fusion_started = perf_counter()
 
         retrieved_chunks = self._fusion_service.fuse(
             ranked_result_collections=ranked_collections,
-            limit=self._top_k,
+            limit=top_k,
         )
 
         fusion_ms = self._milliseconds_since(
@@ -132,7 +169,7 @@ class RagQueryService:
         )
 
         provider = self._provider_resolver(
-            self._settings.rag_generation_profile,
+            self._generation_profile(request),
             self._settings,
         )
 
@@ -156,6 +193,22 @@ class RagQueryService:
             context_building_ms=context_building_ms,
             started_at=started_at,
         )
+
+    def _generation_profile(
+        self,
+        request: RagQueryRequest,
+    ) -> ProcessingProfile:
+        # Targets are the server-resolved execution scope, even when retrieval
+        # returns no hits or fusion removes every local chunk.
+        if any(
+            target.processing_profile is ProcessingProfile.HYBRID_LOCAL
+            for target in request.document_targets
+        ):
+            return ProcessingProfile.HYBRID_LOCAL
+        if request.document_targets:
+            return ProcessingProfile.CLOUD
+        # Preserve the existing no-document, insufficient-context prompt path.
+        return self._settings.rag_generation_profile
 
     async def stream(
         self,
@@ -225,10 +278,11 @@ class RagQueryService:
 
     def retrieve_for_evaluation(
         self, request: RagQueryRequest, *, k: int,
+        pipeline: RetrievalPipeline = RetrievalPipeline.FULL,
     ) -> list[RetrievalResult]:
         if not 1 <= k <= 20:
             raise ValueError('Evaluation k must be between 1 and 20.')
-        ranked, _ = self._retrieve(request, top_k=k)
+        ranked, _ = self._retrieve(request, top_k=k, pipeline=pipeline)
         return self._fusion_service.fuse(ranked_result_collections=ranked, limit=k)
 
     def _retrieve(
@@ -236,6 +290,7 @@ class RagQueryService:
         request: RagQueryRequest,
         *,
         top_k: int | None = None,
+        pipeline: RetrievalPipeline = RetrievalPipeline.FULL,
     ) -> tuple[
         list[list[RetrievalResult]],
         RetrievalStageTimings,
@@ -277,6 +332,7 @@ class RagQueryService:
                         ),
                         question=request.question,
                         limit=top_k if top_k is not None else self._top_k,
+                        **({"pipeline": pipeline} if pipeline is not RetrievalPipeline.FULL else {}),
                     )
                 )
 
@@ -310,6 +366,7 @@ class RagQueryService:
                           if t.processing_profile is ProcessingProfile.HYBRID_LOCAL],
                         question=request.question,
                         limit=top_k if top_k is not None else self._top_k,
+                        **({"pipeline": pipeline} if pipeline is not RetrievalPipeline.FULL else {}),
                     )
                 outcome = local_outcomes[local_index]
                 local_index += 1

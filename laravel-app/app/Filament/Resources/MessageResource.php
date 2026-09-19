@@ -14,6 +14,12 @@ class MessageResource extends ReadOnlyAdminResource
 {
     protected static ?string $model = Message::class;
 
+    protected static ?string $pluralModelLabel = 'الرسائل';
+
+    protected static ?string $modelLabel = 'رسالة';
+
+    protected static ?string $navigationLabel = 'الرسائل';
+
     protected static ?string $slug = 'messages';
 
     public static function table(Table $table): Table

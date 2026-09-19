@@ -14,6 +14,12 @@ class ConversationResource extends ReadOnlyAdminResource
 {
     protected static ?string $model = Conversation::class;
 
+    protected static ?string $pluralModelLabel = 'المحادثات';
+
+    protected static ?string $modelLabel = 'محادثة';
+
+    protected static ?string $navigationLabel = 'المحادثات';
+
     protected static ?string $slug = 'conversations';
 
     public static function table(Table $table): Table

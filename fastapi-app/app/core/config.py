@@ -1,5 +1,6 @@
 from enum import StrEnum
 from functools import lru_cache
+from pathlib import Path
 
 from pydantic import Field, SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -50,6 +51,17 @@ class Settings(BaseSettings):
 
     internal_api_key: SecretStr | None = None
     llama_cloud_api_key: SecretStr | None = None
+    llamaparse_upload_timeout_seconds: float = Field(
+        default=900.0,
+        gt=0,
+        le=3600,
+    )
+    llamaparse_parse_timeout_seconds: float = Field(
+        default=7200.0,
+        gt=0,
+        le=14400,
+    )
+    parse_checkpoint_dir: Path = Path(".cache/parse-checkpoints")
     hf_token: SecretStr | None = None
     cloud_llm_model: str = "Qwen/Qwen3.5-9B"
     ollama_base_url: str = "http://127.0.0.1:11434"
@@ -95,6 +107,23 @@ class Settings(BaseSettings):
     qdrant_url: str = "http://127.0.0.1:6333"
     qdrant_cloud_collection: str = "rag_documents_cloud"
     qdrant_hybrid_local_collection: str = "rag_documents_hybrid_local"
+
+    rag_retrieval_top_k: int = Field(
+        default=5,
+        ge=1,
+    )
+    rag_rrf_candidate_multiplier: int = Field(
+        default=2,
+        ge=1,
+    )
+    rag_rerank_candidate_multiplier: int = Field(
+        default=2,
+        ge=1,
+    )
+    rag_cross_profile_rrf_k: int = Field(
+        default=60,
+        ge=1,
+    )
 
     chunk_size: int = 800
     chunk_overlap: int = 80

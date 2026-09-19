@@ -3,6 +3,8 @@
 namespace App\Jobs;
 
 use App\Enums\ProcessingProfile;
+use App\Enums\ProcessingRunStatus;
+use App\Exceptions\AiServiceException;
 use App\Exceptions\LocalHeavyResourceBusyException;
 use App\Models\Document;
 use App\Models\ProcessingRun;
@@ -44,6 +46,23 @@ class ProcessDocumentJob implements ShouldQueue
         ?LocalHeavyResourceLock $localHeavyResourceLock = null,
     ): void {
         try {
+            // Indexed is a durable checkpoint: retries finish activation/cleanup
+            // without invoking parsers, embedding providers or models again.
+            $completedRun = ProcessingRun::with('document')->find($this->processingRunId);
+            if ($completedRun?->status === ProcessingRunStatus::Indexed) {
+                $document = $completedRun->document;
+                if (! $document || $document->deletion_started_at !== null) {
+                    return;
+                }
+                if ($document->active_processing_run_id === null
+                    || $document->active_processing_run_id < $completedRun->id) {
+                    $processingRunActivator->activate($completedRun);
+                }
+                $this->cleanupSupersededRuns($client, $document);
+
+                return;
+            }
+
             $processingRun = $processingRunProgressor
                 ->markProcessingStarted($this->processingRunId)
                 ->load('document');
@@ -100,20 +119,19 @@ class ProcessDocumentJob implements ShouldQueue
                 result: $result,
             );
 
-            $previousProcessingRun = $processingRunActivator->activate(
+            $processingRunActivator->activate(
                 $indexedProcessingRun,
             );
 
-            if ($previousProcessingRun instanceof ProcessingRun) {
-                $client->deleteProcessingRunPoints(
-                    userId: (int) $document->user_id,
-                    documentId: (int) $document->getKey(),
-                    processingRunId: (int) $previousProcessingRun->getKey(),
-                    processingProfile: $previousProcessingRun->profile,
-                );
-            }
+            $this->cleanupSupersededRuns($client, $document);
         } catch (Throwable $exception) {
             if ($failureClassifier->isRetryable($exception)) {
+                if ($exception instanceof AiServiceException && $exception->errorCode) {
+                    ProcessingRun::whereKey($this->processingRunId)
+                        ->whereNotIn('status', [ProcessingRunStatus::Indexed, ProcessingRunStatus::Failed])
+                        ->update(['error_code' => $failureClassifier->terminalErrorCode($exception),
+                            'failure_reason' => $failureClassifier->terminalFailureReason($exception)]);
+                }
                 // الخطأ المؤقت يُعاد رميه حتى تعيد Laravel نفس الـ Job ونفس الـ Run.
                 throw $exception;
             }
@@ -135,18 +153,45 @@ class ProcessDocumentJob implements ShouldQueue
     public function failed(?Throwable $exception): void
     {
         $timedOut = $exception instanceof TimeoutExceededException;
+        $classifier = app(ProcessingRunFailureClassifier::class);
+        $run = ProcessingRun::find($this->processingRunId);
+        $originalCode = $exception instanceof AiServiceException && $exception->errorCode
+            ? $classifier->terminalErrorCode($exception) : $run?->error_code;
+        $originalReason = $exception instanceof AiServiceException && $exception->errorCode
+            ? $classifier->terminalFailureReason($exception) : $run?->failure_reason;
 
         // عند انتهاء جميع محاولات الـ retry أو حدوث timeout نهائي،
         // نغلق الـ ProcessingRun كفشل نهائي بشكل آمن وIdempotent.
         app(ProcessingRunFailureFinalizer::class)->finalize(
             processingRunId: $this->processingRunId,
-            errorCode: $timedOut
+            errorCode: $originalCode ?? ($timedOut
                 ? 'processing_timeout_exhausted'
-                : 'processing_retries_exhausted',
-            failureReason: $timedOut
+                : 'processing_retries_exhausted'),
+            failureReason: $originalReason ?? ($timedOut
                 ? 'Document processing timed out after all allowed attempts.'
-                : 'Document processing failed after all allowed retry attempts.',
+                : 'Document processing failed after all allowed retry attempts.'),
         );
+    }
+
+    private function cleanupSupersededRuns(AiServiceClient $client, Document $document): void
+    {
+        // Retained indexed run rows are the durable, idempotent cleanup inventory.
+        // Read the current active id so a delayed job cannot remove its successor.
+        $document->refresh();
+        if ($document->deletion_started_at !== null || $document->active_processing_run_id === null) {
+            return;
+        }
+        foreach ($document->processingRuns()
+            ->where('status', ProcessingRunStatus::Indexed)
+            ->where('id', '<', $document->active_processing_run_id)
+            ->orderBy('id')->get() as $run) {
+            $client->deleteProcessingRunPoints(
+                userId: (int) $document->user_id,
+                documentId: (int) $document->id,
+                processingRunId: (int) $run->id,
+                processingProfile: $run->profile,
+            );
+        }
     }
 
     private function releaseLocalHeavyResourceLock(
@@ -172,7 +217,6 @@ class ProcessDocumentJob implements ShouldQueue
                 [
                     'processing_run_id' => $this->processingRunId,
                     'exception' => $exception::class,
-                    'message' => $exception->getMessage(),
                 ],
             );
         }

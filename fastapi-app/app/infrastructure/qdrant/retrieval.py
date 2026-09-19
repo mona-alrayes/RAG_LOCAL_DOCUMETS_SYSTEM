@@ -20,7 +20,6 @@ from app.services.hybrid_local_retrieval import (
 )
 from app.services.retrieval_scope import RetrievalScope
 
-
 RETRIEVAL_PAYLOAD_FIELDS = [
     "user_id",
     "document_id",
@@ -33,7 +32,6 @@ RETRIEVAL_PAYLOAD_FIELDS = [
     "source",
 ]
 
-RRF_CANDIDATE_MULTIPLIER = 2
 
 SparseQuery = (
     models.Document
@@ -209,13 +207,14 @@ def _query_rrf_points(
     dense_query: list[float],
     sparse_query: SparseQuery,
     limit: int,
+    candidate_multiplier: int,
 ) -> list[Any]:
     scope_filter = _build_scope_filter(
         scope=scope,
     )
 
     candidate_limit = (
-        limit * RRF_CANDIDATE_MULTIPLIER
+        limit * candidate_multiplier
     )
 
     response = client.query_points(
@@ -398,10 +397,14 @@ class QdrantCloudRrfRetriever:
         sparse_query_representer: (
             SparseQueryRepresenter
         ),
+        candidate_multiplier: int,
     ) -> None:
         self._client = client
         self._sparse_query_representer = (
             sparse_query_representer
+        )
+        self._candidate_multiplier = (
+            candidate_multiplier
         )
 
     def retrieve(
@@ -413,7 +416,14 @@ class QdrantCloudRrfRetriever:
         question: str,
         query_vector: list[float],
         limit: int,
+        dense_only: bool = False,
     ) -> list[CloudRetrievalResult]:
+        if dense_only:
+            return QdrantCloudDenseRetriever(client=self._client).retrieve(
+                collection_name=collection_name, user_id=user_id, target=target,
+                query_vector=query_vector, limit=limit, question=question,
+            )
+
         scope = RetrievalScope(
             user_id=user_id,
             document_id=target.document_id,
@@ -437,6 +447,9 @@ class QdrantCloudRrfRetriever:
             dense_query=query_vector,
             sparse_query=sparse_query,
             limit=limit,
+            candidate_multiplier=(
+                self._candidate_multiplier
+            ),
         )
 
         return [
@@ -508,10 +521,14 @@ class QdrantHybridLocalRrfRetriever:
         sparse_query_representer: (
             SparseQueryRepresenter
         ),
+        candidate_multiplier: int,
     ) -> None:
         self._client = client
         self._sparse_query_representer = (
             sparse_query_representer
+        )
+        self._candidate_multiplier = (
+            candidate_multiplier
         )
 
     def retrieve(
@@ -523,7 +540,14 @@ class QdrantHybridLocalRrfRetriever:
         question: str,
         query_vector: list[float],
         limit: int,
+        dense_only: bool = False,
     ) -> list[HybridLocalRetrievalResult]:
+        if dense_only:
+            return QdrantHybridLocalDenseRetriever(client=self._client).retrieve(
+                collection_name=collection_name, user_id=user_id, target=target,
+                query_vector=query_vector, limit=limit, question=question,
+            )
+
         scope = RetrievalScope(
             user_id=user_id,
             document_id=target.document_id,
@@ -547,6 +571,9 @@ class QdrantHybridLocalRrfRetriever:
             dense_query=query_vector,
             sparse_query=sparse_query,
             limit=limit,
+            candidate_multiplier=(
+                self._candidate_multiplier
+            ),
         )
 
         return [

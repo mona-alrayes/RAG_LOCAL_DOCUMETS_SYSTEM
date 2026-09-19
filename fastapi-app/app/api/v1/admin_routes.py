@@ -30,12 +30,41 @@ def chunks(
 from app.api.rag_dependencies import get_rag_query_service
 from app.schemas.evaluation import EvaluationQuestionRequest, EvaluationQuestionResponse
 from app.services.evaluation import EvaluationService
+from app.services.golden_evidence_binding import GoldenEvidenceBinder
 from app.services.rag_query import RagQueryService
 
 
-@router.post("/evaluate-question", response_model=EvaluationQuestionResponse)
-def evaluate_question(
+def get_evaluation_service(
+    rag: Annotated[
+        RagQueryService,
+        Depends(get_rag_query_service),
+    ],
+):
+    settings = get_settings()
+    client = build_qdrant_client(settings)
+
+    try:
+        yield EvaluationService(
+            rag=rag,
+            binder=GoldenEvidenceBinder(
+                settings=settings,
+                client=client,
+            ),
+            settings=settings,
+        )
+    finally:
+        client.close()
+
+
+@router.post(
+    "/evaluate-question",
+    response_model=EvaluationQuestionResponse,
+)
+async def evaluate_question(
     request: EvaluationQuestionRequest,
-    rag: Annotated[RagQueryService, Depends(get_rag_query_service)],
+    service: Annotated[
+        EvaluationService,
+        Depends(get_evaluation_service),
+    ],
 ) -> EvaluationQuestionResponse:
-    return EvaluationService(rag=rag, settings=get_settings()).evaluate(request)
+    return await service.evaluate(request)

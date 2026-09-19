@@ -2,6 +2,7 @@
 
 namespace App\Services\Documents;
 
+use App\Enums\DocumentStatus;
 use App\Enums\ProcessingRunStatus;
 use App\Exceptions\DocumentDeletionException;
 use App\Models\Document;
@@ -24,6 +25,10 @@ class DocumentDeletionService
                 ->lockForUpdate()
                 ->findOrFail($document->id);
 
+            if (in_array($lockedDocument->status, [DocumentStatus::Pending, DocumentStatus::Scanning], true)) {
+                throw DocumentDeletionException::processingInProgress();
+            }
+
             $processingRuns = $lockedDocument
                 ->processingRuns()
                 ->orderBy('id')
@@ -45,6 +50,19 @@ class DocumentDeletionService
             if ($hasProcessingInProgress) {
                 throw DocumentDeletionException::processingInProgress();
             }
+
+            // Commit the tombstone before irreversible external cleanup. Retrying
+            // deletion reuses the retained run inventory and private file path.
+            $lockedDocument->forceFill([
+                'deletion_started_at' => $lockedDocument->deletion_started_at ?? now(),
+                'active_processing_run_id' => null,
+                'status' => DocumentStatus::Failed,
+            ])->save();
+        });
+
+        DB::transaction(function () use ($document): void {
+            $lockedDocument = Document::query()->lockForUpdate()->findOrFail($document->id);
+            $processingRuns = $lockedDocument->processingRuns()->orderBy('id')->lockForUpdate()->get();
 
             foreach ($processingRuns as $processingRun) {
                 $this->aiServiceClient->deleteProcessingRunPoints(

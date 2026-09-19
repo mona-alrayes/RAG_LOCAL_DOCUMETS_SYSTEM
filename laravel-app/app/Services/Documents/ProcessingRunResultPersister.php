@@ -52,6 +52,8 @@ class ProcessingRunResultPersister
                 'qdrant_collection' => $result->qdrantCollection,
                 'status' => $result->status,
                 'indexed_at' => now(),
+                'error_code' => null,
+                'failure_reason' => null,
             ]);
 
             $processingRun->save();

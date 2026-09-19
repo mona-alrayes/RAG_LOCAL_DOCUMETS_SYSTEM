@@ -227,7 +227,7 @@
                 </p>
 
                 <p class="mt-2 text-sm leading-7 text-red-100/80">
-                    {{ __('documents.failure.processing_failed') }}
+                    {{ $document->failureMessage() }}
                     النسخة السابقة ما زالت فعالة ومتاحة للاستخدام.
                 </p>
             </div>
@@ -235,7 +235,7 @@
             <div
                 class="break-words rounded-2xl border border-red-400/20 bg-red-400/10 p-4 text-sm leading-6 text-red-200 sm:p-5"
             >
-                {{ __('documents.failure.processing_failed') }}
+                {{ $document->failureMessage() }}
             </div>
         @endif
 

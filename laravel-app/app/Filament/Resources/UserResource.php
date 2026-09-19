@@ -19,6 +19,12 @@ class UserResource extends ReadOnlyAdminResource
 {
     protected static ?string $model = User::class;
 
+    protected static ?string $pluralModelLabel = 'المستخدمون';
+
+    protected static ?string $modelLabel = 'مستخدم';
+
+    protected static ?string $navigationLabel = 'المستخدمون';
+
     protected static ?string $slug = 'users';
 
     public static function table(Table $table): Table

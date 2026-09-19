@@ -9,8 +9,7 @@ from app.processing.indexing import resolve_qdrant_collection
 from app.services.retrieval_observability import (
     RetrievalStageTimings,
 )
-
-HYBRID_LOCAL_RERANK_CANDIDATE_MULTIPLIER = 2
+from app.services.retrieval_pipeline import RetrievalPipeline
 
 
 @dataclass(frozen=True, slots=True)
@@ -117,14 +116,16 @@ class HybridLocalRetrievalService:
         target: HybridLocalRetrievalTarget,
         question: str,
         limit: int,
+        pipeline: RetrievalPipeline = RetrievalPipeline.FULL,
     ) -> HybridLocalRetrievalOutcome:
         return self.retrieve_many_observed(
-            user_id=user_id, targets=[target], question=question, limit=limit,
+            user_id=user_id, targets=[target], question=question, limit=limit, pipeline=pipeline,
         )[0]
 
     def retrieve_many_observed(
         self, *, user_id: int, targets: list[HybridLocalRetrievalTarget],
         question: str, limit: int,
+        pipeline: RetrievalPipeline = RetrievalPipeline.FULL,
     ) -> list[HybridLocalRetrievalOutcome]:
         for target in targets:
             self._validate(target=target, limit=limit)
@@ -142,15 +143,23 @@ class HybridLocalRetrievalService:
                     profile=target.processing_profile, settings=self._settings),
                 user_id=user_id, target=target, question=question,
                 query_vector=query_vector,
-                limit=limit * HYBRID_LOCAL_RERANK_CANDIDATE_MULTIPLIER,
+                limit=(
+                    limit
+                    * (
+                        self._settings.rag_rerank_candidate_multiplier
+                        if pipeline is RetrievalPipeline.FULL
+                        else 1
+                    )
+                ),
+                **({"dense_only": True} if pipeline is RetrievalPipeline.DENSE_ONLY else {}),
             ))
             retrieval_times.append(self._elapsed_ms(started))
         candidates = [candidate for group in groups for candidate in group]
         started = perf_counter()
         ranked = self._reranker.rerank(
             question=question, candidates=candidates, limit=len(candidates),
-        ) if candidates else []
-        reranking_ms = self._elapsed_ms(started) if candidates else None
+        ) if candidates and pipeline is RetrievalPipeline.FULL else candidates
+        reranking_ms = self._elapsed_ms(started) if candidates and pipeline is RetrievalPipeline.FULL else None
         # Score once, then restore document groups before existing rank fusion.
         # Stable score sorting preserves the original tie order within each group.
         return [HybridLocalRetrievalOutcome(

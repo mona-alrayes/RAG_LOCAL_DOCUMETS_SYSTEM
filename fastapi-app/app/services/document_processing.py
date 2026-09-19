@@ -10,8 +10,9 @@ from app.infrastructure.qdrant.indexer import (
     QdrantDocumentIndexer,
 )
 from app.parsing.base import BaseDocumentLoader
+from app.parsing.checkpoint import ParseCheckpointStore
 from app.parsing.normalization import normalize_llamaparse_pages
-from app.parsing.providers.llamaparse import LlamaParsePage
+from app.parsing.providers.llamaparse import LlamaParsePage, LlamaParseProvider
 from app.processing.indexing import resolve_qdrant_collection
 from app.processing.profiles import ExecutableProcessingProfile
 from app.processing.registry import ProcessingProfileRegistry
@@ -43,6 +44,7 @@ class ProcessDocumentService:
         indexer: QdrantDocumentIndexer,
         progress_notifier: ProcessingProgressNotifier,
         report_builder: ProcessingReportBuilder | None = None,
+        parse_checkpoints: ParseCheckpointStore | None = None,
     ) -> None:
         self._settings = settings
         self._loaders = loaders
@@ -50,6 +52,7 @@ class ProcessDocumentService:
         self._indexer = indexer
         self._progress_notifier = progress_notifier
         self._report_builder = report_builder or ProcessingReportBuilder()
+        self._parse_checkpoints = parse_checkpoints
 
     def process(
         self,
@@ -65,7 +68,11 @@ class ProcessDocumentService:
         )
         loader = self._resolve_loader(request.file_type)
 
+        # Reject unavailable local resources before incurring external parsing costs.
+        profile.preflight()
+
         documents, parse_ms = self._parse_document(
+            request=request,
             loader=loader,
             file_path=file_path,
             file_type=request.file_type,
@@ -158,6 +165,7 @@ class ProcessDocumentService:
     def _parse_document(
         self,
         *,
+        request: ProcessDocumentRequest,
         loader: BaseDocumentLoader[LlamaParsePage],
         file_path: Path,
         file_type: DocumentFileType,
@@ -165,7 +173,15 @@ class ProcessDocumentService:
         started_at = perf_counter()
 
         try:
-            pages = loader.load(file_path)
+            if self._parse_checkpoints is None:
+                pages = loader.load(file_path)
+            else:
+                pages = self._parse_checkpoints.load(
+                    user_id=request.user_id, document_id=request.document_id,
+                    run_id=request.processing_run_id, file_path=file_path,
+                    parser_signature=LlamaParseProvider.CHECKPOINT_SIGNATURE,
+                    loader=lambda: loader.load(file_path),
+                )
 
             documents = normalize_llamaparse_pages(
                 pages,

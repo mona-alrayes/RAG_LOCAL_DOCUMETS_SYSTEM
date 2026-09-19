@@ -51,7 +51,7 @@ class DocumentSummaryResource extends JsonResource
             'safe_failure' => $document->safeFailure === null
                 ? null
                 : [
-                    'message' => __('documents.failure.processing_failed'),
+                    'message' => $document->failureMessage(),
                 ],
 
             'allowed_actions' => [

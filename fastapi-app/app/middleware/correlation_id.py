@@ -5,7 +5,6 @@ from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
 from app.core.logging import reset_correlation_id, set_correlation_id
 
-
 CORRELATION_ID_HEADER = b"x-correlation-id"
 logger = logging.getLogger("app.request")
 
@@ -52,10 +51,9 @@ class CorrelationIdMiddleware:
             if name == CORRELATION_ID_HEADER:
                 try:
                     correlation_id = value.decode("ascii").strip()
-                except UnicodeDecodeError:
+                    # Only opaque UUIDs cross the logging/response boundary.
+                    return str(uuid.UUID(correlation_id))
+                except (UnicodeDecodeError, ValueError):
                     break
-
-                if correlation_id and len(correlation_id) <= 128:
-                    return correlation_id
 
         return str(uuid.uuid4())

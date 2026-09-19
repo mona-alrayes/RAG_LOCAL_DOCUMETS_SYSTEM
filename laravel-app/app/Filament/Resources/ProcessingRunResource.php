@@ -22,6 +22,12 @@ class ProcessingRunResource extends ReadOnlyAdminResource
 {
     protected static ?string $model = ProcessingRun::class;
 
+    protected static ?string $pluralModelLabel = 'عمليات المعالجة';
+
+    protected static ?string $modelLabel = 'عملية معالجة';
+
+    protected static ?string $navigationLabel = 'عمليات المعالجة (Processing Runs)';
+
     protected static ?string $slug = 'processing-runs';
 
     public static function table(Table $table): Table

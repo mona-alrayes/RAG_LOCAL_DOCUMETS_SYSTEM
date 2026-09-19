@@ -11,9 +11,7 @@ from app.processing.indexing import (
 from app.services.retrieval_observability import (
     RetrievalStageTimings,
 )
-
-
-CLOUD_RERANK_CANDIDATE_MULTIPLIER = 2
+from app.services.retrieval_pipeline import RetrievalPipeline
 
 
 @dataclass(frozen=True, slots=True)
@@ -117,6 +115,7 @@ class CloudRetrievalService:
         target: CloudRetrievalTarget,
         question: str,
         limit: int,
+        pipeline: RetrievalPipeline = RetrievalPipeline.FULL,
     ) -> CloudRetrievalOutcome:
         self._validate(
             target=target,
@@ -142,7 +141,11 @@ class CloudRetrievalService:
 
         candidate_limit = (
             limit
-            * CLOUD_RERANK_CANDIDATE_MULTIPLIER
+            * (
+                self._settings.rag_rerank_candidate_multiplier
+                if pipeline is RetrievalPipeline.FULL
+                else 1
+            )
         )
 
         retrieval_started = perf_counter()
@@ -154,15 +157,16 @@ class CloudRetrievalService:
             question=question,
             query_vector=query_vector,
             limit=candidate_limit,
+            **({"dense_only": True} if pipeline is RetrievalPipeline.DENSE_ONLY else {}),
         )
 
         retrieval_ms = self._elapsed_ms(
             retrieval_started
         )
 
-        if not candidates:
+        if not candidates or pipeline is not RetrievalPipeline.FULL:
             return CloudRetrievalOutcome(
-                results=(),
+                results=tuple(candidates[:limit]),
                 timings_ms=RetrievalStageTimings(
                     query_embedding=query_embedding_ms,
                     retrieval=retrieval_ms,

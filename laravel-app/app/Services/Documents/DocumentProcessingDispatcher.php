@@ -48,6 +48,10 @@ class DocumentProcessingDispatcher
                 ->lockForUpdate()
                 ->findOrFail($document->id);
 
+            if ($lockedDocument->deletion_started_at !== null) {
+                throw new LogicException('Document deletion is in progress.');
+            }
+
             if ($lockedDocument->processingRuns()->exists()) {
                 throw new LogicException(
                     'Initial document processing has already been dispatched.',
@@ -89,6 +93,10 @@ class DocumentProcessingDispatcher
             $lockedDocument = Document::query()
                 ->lockForUpdate()
                 ->findOrFail($document->id);
+
+            if ($lockedDocument->deletion_started_at !== null) {
+                throw DocumentReprocessingException::noActiveRun();
+            }
 
             if ($lockedDocument->active_processing_run_id === null) {
                 throw DocumentReprocessingException::noActiveRun();
@@ -140,7 +148,8 @@ class DocumentProcessingDispatcher
         return DB::transaction(function () use ($document, $failedRun): ProcessingRun {
             $locked = Document::query()->lockForUpdate()->findOrFail($document->id);
             $failed = ProcessingRun::query()->lockForUpdate()->findOrFail($failedRun->id);
-            if ($failed->document_id !== $locked->id
+            if ($locked->deletion_started_at !== null
+                || $failed->document_id !== $locked->id
                 || $failed->status !== ProcessingRunStatus::Failed
                 || ! in_array($locked->status, [DocumentStatus::Failed, DocumentStatus::Ready], true)
                 || $locked->processingRuns()->where('id', '>', $failed->id)->exists()

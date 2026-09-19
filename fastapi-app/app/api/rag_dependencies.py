@@ -72,6 +72,9 @@ def get_rag_query_service() -> Iterator[RagQueryService]:
             sparse_query_representer=(
                 CloudSparseRepresenter()
             ),
+            candidate_multiplier=(
+                settings.rag_rrf_candidate_multiplier
+            ),
         ),
         reranker=CloudJinaReranker(
             api_key=(
@@ -131,6 +134,9 @@ def get_rag_query_service() -> Iterator[RagQueryService]:
                     sparse_query_representer=(
                         LocalBm25Representer()
                     ),
+                    candidate_multiplier=(
+                        settings.rag_rrf_candidate_multiplier
+                    ),
                 )
             ),
             reranker=LocalBgeReranker(
@@ -154,7 +160,11 @@ def get_rag_query_service() -> Iterator[RagQueryService]:
             context_service=ContextService(),
             prompt_builder=PromptBuilder(),
             fusion_service=(
-                CrossProfileRankFusionService()
+                CrossProfileRankFusionService(
+                    rrf_k=(
+                        settings.rag_cross_profile_rrf_k
+                    ),
+                )
             ),
             provider_resolver=(
                 lambda profile, current_settings:
