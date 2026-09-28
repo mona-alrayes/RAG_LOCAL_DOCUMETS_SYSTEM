@@ -93,7 +93,13 @@ final class ProcessDocumentResponseValidator
             ],
             'profile_snapshot.chunking' => [
                 'required',
-                'array:chunk_size,chunk_overlap',
+                'array:chunk_size,chunk_overlap,version',
+            ],
+            // اختياري للتوافق مع نتائج المعالجة القديمة التي لا تسجل خوارزمية التقطيع.
+            'profile_snapshot.chunking.version' => [
+                'sometimes',
+                'string',
+                'in:markdown-sections-v1,markdown-sections-overlap-v2,markdown-sections-scoped-overlap-v3',
             ],
             'profile_snapshot.chunking.chunk_size' => [
                 'required',

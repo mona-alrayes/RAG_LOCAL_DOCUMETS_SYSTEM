@@ -155,6 +155,19 @@
                 </div>
 
                 <div class="flex flex-wrap gap-3 text-sm font-semibold">
+                    @if($evaluation->status === 'completed')
+                        <button
+                            type="button"
+                            wire:click="exportExcel"
+                            wire:loading.attr="disabled"
+                            wire:target="exportExcel"
+                            class="rounded-lg bg-primary-600 px-4 py-2 text-white transition hover:bg-primary-500 disabled:cursor-wait disabled:opacity-60"
+                        >
+                            <span wire:loading.remove wire:target="exportExcel">تصدير إلى Excel</span>
+                            <span wire:loading wire:target="exportExcel">جارٍ تجهيز الملف...</span>
+                        </button>
+                    @endif
+
                     <a
                         href="{{ \App\Filament\Pages\EvaluationDashboard::getUrl() }}"
                         class="rounded-lg border border-gray-300 px-4 py-2 text-gray-700 transition hover:bg-gray-50 dark:border-gray-700 dark:text-gray-200 dark:hover:bg-gray-800"
@@ -619,6 +632,12 @@
                 @endif
 
                 @if($baseline)
+                    {{-- تغيير معيار الصحة يغيّر معنى الدرجة، لذلك نوضح حدود المقارنة. --}}
+                    @if(isset($configurationDifferences['correctness_rubric_version']))
+                        <p class="rounded-xl border border-warning-300 p-4 text-sm" role="note">
+                            معيار تقييم صحة الإجابة مختلف بين التشغيلين؛ فرق الدرجة لا يمثل تحسناً أو تراجعاً في الإجابات وحدها. للمقارنة العادلة أعد تقييم الإجابات بنفس المعيار.
+                        </p>
+                    @endif
                     <div class="overflow-x-auto rounded-xl border border-gray-200 dark:border-gray-800">
                         <table class="min-w-full text-sm">
                             <thead class="bg-gray-50 dark:bg-gray-950">
@@ -1046,6 +1065,19 @@
                                                 @endif
 
                                                 {{-- Judge --}}
+                                                {{-- نعرض دليل كل نقطة حتى يمكن مراجعة حكم الموديل، وليس الدرجة فقط. --}}
+                                                @if($pointChecks = data_get($question->judge_details, 'correctness.checks', []))
+                                                    <div class="rounded-xl border border-gray-200 p-4 dark:border-gray-800">
+                                                        <p class="text-sm font-bold">مطابقة نقاط الإجابة المرجعية</p>
+                                                        @foreach($pointChecks as $check)
+                                                            <div class="mt-3 border-t border-gray-200 pt-3 text-sm dark:border-gray-800">
+                                                                <p class="font-semibold">{{ match ($check['status']) { 'supported' => 'مطابقة', 'partial' => 'مطابقة جزئية', 'missing' => 'ناقصة', 'contradicted' => 'متناقضة', default => 'غير محددة' } }}</p>
+                                                                <p class="mt-1">المرجع: {{ $check['reference_quote'] }}</p>
+                                                                <p class="mt-1">الإجابة: {{ $check['answer_quote'] ?? 'لم يجد المقيّم عبارة تقابل هذه النقطة.' }}</p>
+                                                            </div>
+                                                        @endforeach
+                                                    </div>
+                                                @endif
                                                 <div class="grid gap-4 md:grid-cols-2">
                                                     <div class="rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-gray-900">
                                                         <p class="text-sm font-bold">

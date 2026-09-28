@@ -1,7 +1,7 @@
 @props(['title' => null])
 
 <!DOCTYPE html>
-<html lang="ar" dir="rtl" class="dark scroll-smooth">
+<html lang="ar" dir="rtl" class="dark marketing-root scroll-smooth">
     <head>
         <meta charset="utf-8">
         <meta
@@ -13,10 +13,11 @@
             {{ $title ? $title . ' | ' . config('app.name') : config('app.name') }}
         </title>
 
+        <link rel="stylesheet" href="{{ asset('fonts/filament/filament/inter/index.css') }}">
         @vite(['resources/css/app.css', 'resources/js/app.js'])
     </head>
 
-    <body class="marketing-shell min-h-screen bg-navy-950 text-ice-100">
+    <body class="marketing-shell marketing-shell--fluid min-h-screen bg-navy-950 text-ice-100">
         <div class="relative isolate min-h-screen overflow-clip">
             <div
                 class="landing-grid-bg"

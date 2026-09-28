@@ -62,7 +62,7 @@
 
             <button
                 type="submit"
-                class="flex min-h-10 w-full items-center gap-2 rounded-lg px-3 py-2 text-xs font-semibold text-cyan-300 transition hover:bg-white/5 hover:text-cyan-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cyan-400"
+                class="authenticated-sidebar-subitem flex min-h-10 w-full items-center gap-2 rounded-lg px-3 py-2 font-semibold text-cyan-300 transition hover:bg-white/5 hover:text-cyan-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cyan-400"
             >
                 <svg
                     viewBox="0 0 24 24"
@@ -124,7 +124,7 @@
                     @if ($isActive)
                         aria-current="page"
                     @endif
-                    class="min-w-0 flex-1 truncate px-3 py-2 text-xs font-medium {{ $isActive ? 'text-cyan-200' : 'text-mist-300 hover:text-ice-100' }}"
+                    class="authenticated-sidebar-subitem min-w-0 flex-1 truncate px-3 py-2 font-medium {{ $isActive ? 'text-cyan-200' : 'text-mist-300 hover:text-ice-100' }}"
                 >
                     {{ $conversationTitle }}
 
@@ -171,7 +171,7 @@
                             menuOpen = false;
                             renameOpen = true;
                         "
-                        class="flex w-full items-center rounded-lg px-3 py-2 text-start text-xs text-mist-200 hover:bg-white/5 hover:text-ice-100"
+                        class="authenticated-sidebar-subitem flex w-full items-center rounded-lg px-3 py-2 text-start text-mist-200 hover:bg-white/5 hover:text-ice-100"
                     >
                         إعادة تسمية
                     </button>
@@ -183,7 +183,7 @@
                             menuOpen = false;
                             deleteOpen = true;
                         "
-                        class="flex w-full items-center rounded-lg px-3 py-2 text-start text-xs text-red-300 hover:bg-red-400/10"
+                        class="authenticated-sidebar-subitem flex w-full items-center rounded-lg px-3 py-2 text-start text-red-300 hover:bg-red-400/10"
                     >
                         حذف
                     </button>
@@ -325,7 +325,7 @@
                 </template>
             </div>
         @empty
-            <p class="px-3 py-3 text-xs leading-5 text-mist-400">
+            <p class="authenticated-sidebar-subitem px-3 py-3 leading-5 text-mist-400">
                 لا توجد محادثات بعد.
             </p>
         @endforelse
@@ -333,7 +333,7 @@
         <a
             href="{{ route('conversations.index') }}"
             wire:navigate
-            class="mt-2 flex min-h-9 items-center rounded-lg px-3 py-2 text-xs font-semibold text-cyan-300 transition hover:bg-white/5 hover:text-cyan-200"
+            class="authenticated-sidebar-subitem mt-2 flex min-h-9 items-center rounded-lg px-3 py-2 font-semibold text-cyan-300 transition hover:bg-white/5 hover:text-cyan-200"
         >
             عرض كل المحادثات
         </a>

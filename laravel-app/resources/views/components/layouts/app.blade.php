@@ -22,20 +22,21 @@
 @endphp
 
 <!DOCTYPE html>
-<html lang="ar" dir="rtl" class="dark">
+<html lang="ar" dir="rtl" class="dark authenticated-root">
     <head>
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
 
         <title>{{ $title }} | {{ config('app.name') }}</title>
 
+        <link rel="stylesheet" href="{{ asset('fonts/filament/filament/inter/index.css') }}">
         @vite(['resources/css/app.css', 'resources/js/app.js'])
         @livewireStyles
     </head>
 
     <body
         data-authenticated-shell
-        class="authenticated-shell min-h-screen bg-navy-950 text-ice-100"
+        class="authenticated-shell min-h-screen bg-navy-950 text-ice-100 {{ $fullBleed ? 'authenticated-shell--full-bleed' : '' }}"
     >
         {{-- Sidebar الرئيسي --}}
         <flux:sidebar
@@ -149,14 +150,22 @@
 
             {{-- هوية المستخدم وتسجيل الخروج --}}
             <div class="mt-4 border-t border-white/10 pt-4">
-                <div class="mb-3 min-w-0 px-2">
-                    <p class="truncate text-sm font-medium text-ice-100">
-                        {{ auth()->user()->name }}
-                    </p>
+                <div class="mb-3 flex min-w-0 items-center gap-3 px-2">
+                    <x-user-avatar
+                        :user="auth()->user()"
+                        size="sm"
+                        data-sidebar-user-avatar
+                    />
 
-                    <p class="mt-1 text-xs text-mist-300">
-                        حساب المستخدم
-                    </p>
+                    <div class="min-w-0">
+                        <p class="truncate text-sm font-medium text-ice-100">
+                            {{ auth()->user()->name }}
+                        </p>
+
+                        <p class="mt-1 text-xs text-mist-300">
+                            حساب المستخدم
+                        </p>
+                    </div>
                 </div>
 
                 <form method="POST" action="{{ route('logout') }}">
@@ -222,7 +231,7 @@
         @endif
 
         <flux:main
-            class="authenticated-main min-w-0 overflow-x-clip {{ $fullBleed ? 'p-0!' : '' }}"
+            class="authenticated-main min-w-0 overflow-x-clip {{ $fullBleed ? 'authenticated-main--full-bleed p-0!' : '' }}"
         >
             @if ($fullBleed)
                 {{ $slot }}

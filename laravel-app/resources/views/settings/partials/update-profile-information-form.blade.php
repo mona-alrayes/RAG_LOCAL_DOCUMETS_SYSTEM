@@ -18,10 +18,39 @@
     <form
         method="POST"
         action="{{ route('user-profile-information.update') }}"
+        enctype="multipart/form-data"
         class="space-y-5"
     >
         @csrf
         @method('PUT')
+
+        <div class="flex flex-col gap-4 rounded-xl border border-white/10 bg-navy-950/50 p-4 sm:flex-row sm:items-center">
+            <x-user-avatar :user="auth()->user()" size="lg" />
+
+            <div class="min-w-0 flex-1">
+                <label for="avatar" class="block text-sm font-medium text-ice-100">
+                    الصورة الشخصية
+                </label>
+
+                <p class="mt-1 text-xs leading-5 text-mist-300">
+                    JPEG أو PNG أو WebP، بحجم أقصى 2MB.
+                </p>
+
+                <input
+                    id="avatar"
+                    name="avatar"
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp"
+                    class="mt-3 block w-full text-xs text-mist-300 file:me-3 file:cursor-pointer file:rounded-lg file:border-0 file:bg-cyan-400/10 file:px-3 file:py-2 file:font-semibold file:text-cyan-300 hover:file:bg-cyan-400/15"
+                >
+
+                @error('avatar', 'updateProfileInformation')
+                    <p class="mt-2 text-sm text-danger-300">
+                        {{ $message }}
+                    </p>
+                @enderror
+            </div>
+        </div>
 
         <div>
             <flux:input
