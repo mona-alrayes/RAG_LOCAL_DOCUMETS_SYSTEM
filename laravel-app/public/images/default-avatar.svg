@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96" role="img" aria-labelledby="title description">
+  <title id="title">صورة مستخدم افتراضية</title>
+  <desc id="description">شكل مبسط لرأس وكتفين</desc>
+  <defs>
+    <linearGradient id="background" x1="12" y1="8" x2="84" y2="88" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#123b55"/>
+      <stop offset="1" stop-color="#061a2e"/>
+    </linearGradient>
+  </defs>
+  <rect width="96" height="96" rx="48" fill="url(#background)"/>
+  <circle cx="48" cy="37" r="17" fill="#9ddce5"/>
+  <path d="M19 84c3-20 14-30 29-30s26 10 29 30" fill="#9ddce5"/>
+  <circle cx="48" cy="48" r="46.5" fill="none" stroke="#00e5ff" stroke-opacity=".28" stroke-width="3"/>
+</svg>

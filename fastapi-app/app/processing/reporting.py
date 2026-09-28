@@ -18,6 +18,7 @@ from app.processing.local_sparse import (
     LOCAL_BM25_LANGUAGE,
     LOCAL_BM25_MODEL,
 )
+from app.processing.markdown_chunking import CHUNKING_VERSION
 
 
 class ProcessingStage(StrEnum):
@@ -33,6 +34,8 @@ class ChunkingSnapshot(BaseModel):
 
     chunk_size: int = Field(ge=1)
     chunk_overlap: int = Field(ge=0)
+    # يُحفظ مع تشغيل المعالجة لتمييز الفهارس القديمة عن التقطيع الجديد.
+    version: str = CHUNKING_VERSION
 
 
 class DenseEmbeddingSnapshot(BaseModel):

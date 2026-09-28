@@ -4,8 +4,12 @@ namespace App\Actions\Fortify;
 
 use App\Models\User;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\Rules\File;
 use Illuminate\Validation\ValidationException;
 use Laravel\Fortify\Contracts\UpdatesUserProfileInformation;
 
@@ -14,7 +18,7 @@ class UpdateUserProfileInformation implements UpdatesUserProfileInformation
     /**
      * Validate and update the given user's profile information.
      *
-     * @param  array<string, string>  $input
+     * @param  array<string, string|UploadedFile>  $input
      *
      * @throws ValidationException
      */
@@ -30,32 +34,60 @@ class UpdateUserProfileInformation implements UpdatesUserProfileInformation
                 'max:255',
                 Rule::unique('users')->ignore($user->id),
             ],
+            'avatar' => [
+                'nullable',
+                File::image()
+                    ->types(['jpg', 'jpeg', 'png', 'webp'])
+                    ->max(2 * 1024),
+            ],
         ])->validateWithBag('updateProfileInformation');
 
-        if ($input['email'] !== $user->email &&
-            $user instanceof MustVerifyEmail) {
-            $this->updateVerifiedUser($user, $input);
-        } else {
-            $user->forceFill([
-                'name' => $input['name'],
-                'email' => $input['email'],
-            ])->save();
-        }
-    }
+        $emailChanged = $input['email'] !== $user->email;
+        $oldAvatar = $user->avatar()->first();
+        $newAvatarPath = null;
 
-    /**
-     * Update the given verified user's profile information.
-     *
-     * @param  array<string, string>  $input
-     */
-    protected function updateVerifiedUser(User $user, array $input): void
-    {
-        $user->forceFill([
+        if (($input['avatar'] ?? null) instanceof UploadedFile) {
+            $newAvatarPath = $input['avatar']->store('avatars', 'public');
+        }
+
+        $values = [
             'name' => $input['name'],
             'email' => $input['email'],
-            'email_verified_at' => null,
-        ])->save();
+        ];
 
-        $user->sendEmailVerificationNotification();
+        if ($newAvatarPath !== null) {
+            $user->unsetRelation('avatar');
+        }
+
+        try {
+            DB::transaction(function () use ($emailChanged, $newAvatarPath, $user, $values): void {
+                if ($emailChanged && $user instanceof MustVerifyEmail) {
+                    $values['email_verified_at'] = null;
+                }
+
+                $user->forceFill($values)->save();
+
+                if ($newAvatarPath !== null) {
+                    $user->avatar()->updateOrCreate([], [
+                        'disk' => 'public',
+                        'path' => $newAvatarPath,
+                    ]);
+                }
+            });
+        } catch (\Throwable $exception) {
+            if ($newAvatarPath !== null) {
+                Storage::disk('public')->delete($newAvatarPath);
+            }
+
+            throw $exception;
+        }
+
+        if ($newAvatarPath !== null && $oldAvatar !== null) {
+            Storage::disk($oldAvatar->disk)->delete($oldAvatar->path);
+        }
+
+        if ($emailChanged && $user instanceof MustVerifyEmail) {
+            $user->sendEmailVerificationNotification();
+        }
     }
 }

@@ -11,8 +11,10 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\MorphOne;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Support\Facades\Storage;
 
 #[Fillable(['name', 'email', 'password'])]
 #[Hidden(['password', 'remember_token'])]
@@ -39,6 +41,23 @@ class User extends Authenticatable implements FilamentUser, MustVerifyEmail
     public function canAccessPanel(Panel $panel): bool
     {
         return $panel->getId() === 'admin' && $this->is_admin && $this->suspended_at === null && $this->hasVerifiedEmail();
+    }
+
+    public function avatarUrl(): string
+    {
+        if ($this->avatar !== null) {
+            return Storage::disk($this->avatar->disk)->url($this->avatar->path);
+        }
+
+        return asset('images/default-avatar.svg');
+    }
+
+    /**
+     * Get the user's profile image.
+     */
+    public function avatar(): MorphOne
+    {
+        return $this->morphOne(Image::class, 'imageable');
     }
 
     /**

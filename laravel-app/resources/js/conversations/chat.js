@@ -1,5 +1,7 @@
 import DOMPurify from 'dompurify';
 import { marked } from 'marked';
+import { renderConversationDiagrams } from './diagrams.js';
+import { initializeConversationCopy } from './copy.js';
 
 const conversationAnswerStreams = new Map();
 const initializedComposers = new WeakSet();
@@ -87,6 +89,7 @@ const secureRenderedLinks = (element) => {
 export const renderConversationMarkdown = (
     element,
     markdown,
+    { diagrams = true } = {},
 ) => {
     if (! element || typeof markdown !== 'string') {
         return;
@@ -101,6 +104,8 @@ export const renderConversationMarkdown = (
     );
 
     secureRenderedLinks(element);
+    // نبقي الرسم خارج تنقية Markdown العادي؛ له مسار SVG معزول ومقيّد خاص به.
+    if (diagrams) return renderConversationDiagrams(element);
 };
 
 const renderHistoricalMarkdownElement = (
@@ -167,6 +172,8 @@ const startHistoricalMarkdownObserver = () => {
                 const target = record.target instanceof Element
                     ? record.target
                     : record.target.parentElement;
+                // تغييرات الرسم وأزرار النسخ ليست تعديلات على مصدر رسالة Livewire.
+                if (target?.closest('[data-conversation-diagram], [data-copy-ui]')) return;
                 const answer = target?.closest('[data-assistant-markdown]');
                 if (answer) {
                     renderHistoricalMarkdownElement(answer);
@@ -266,6 +273,7 @@ export const startConversationAnswerStream = (
         renderConversationMarkdown(
             state.content,
             state.rawBuffer,
+            { diagrams: false },
         );
     };
 
@@ -307,7 +315,7 @@ export const startConversationAnswerStream = (
         },
     );
 
-    const terminal = () => {
+    const terminal = (completed) => {
         source.close();
 
         if (state.renderFrame !== null) {
@@ -320,6 +328,8 @@ export const startConversationAnswerStream = (
 
         if (state.receivedToken) {
             renderBuffer();
+            // نرسم مرة واحدة بعد نجاح اكتمال الرسالة، لا على كود جزئي أثناء البث.
+            if (completed) void renderConversationDiagrams(state.content);
         }
 
         state.content.setAttribute(
@@ -343,12 +353,12 @@ export const startConversationAnswerStream = (
 
     source.addEventListener(
         'completed',
-        terminal,
+        () => terminal(true),
     );
 
     source.addEventListener(
         'failed',
-        terminal,
+        () => terminal(false),
     );
 };
 
@@ -533,6 +543,7 @@ export const initializeConversationUi = () => {
     }
 
     conversationUiInitialized = true;
+    initializeConversationCopy();
 
     window.startConversationAnswerStream =
         startConversationAnswerStream;

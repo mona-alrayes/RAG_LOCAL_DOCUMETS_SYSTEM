@@ -2,6 +2,10 @@
 @source '../../../../app/Filament/**/*.php';
 @source '../../../../resources/views/filament/**/*.blade.php';
 
+html {
+    font-size: clamp(14px, calc(12.5px + 0.25vw), 20px);
+}
+
 .evaluation-metrics {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(8rem, 1fr));

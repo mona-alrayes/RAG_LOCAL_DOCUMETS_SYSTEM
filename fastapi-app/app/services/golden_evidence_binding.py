@@ -31,6 +31,7 @@ _SPACE = re.compile(r"\s+")
 class _BindingOption:
     chunks: tuple[BoundChunk, ...]
     score: float
+    section_matches: bool
 
 
 class GoldenEvidenceBinder:
@@ -208,6 +209,10 @@ class GoldenEvidenceBinder:
                         evidence.evidence_text,
                         chunk.text,
                     ),
+                    section_matches=self._section_matches(
+                        evidence,
+                        (chunk,),
+                    ),
                 )
             )
 
@@ -239,6 +244,10 @@ class GoldenEvidenceBinder:
                             evidence.evidence_text,
                             left.text + "\n" + right.text,
                         ),
+                        section_matches=self._section_matches(
+                            evidence,
+                            (left, right),
+                        ),
                     )
                 )
 
@@ -259,6 +268,7 @@ class GoldenEvidenceBinder:
         options.sort(
             key=lambda option: (
                 -option.score,
+                -int(option.section_matches),
                 len(option.chunks),
             ),
         )
@@ -268,7 +278,9 @@ class GoldenEvidenceBinder:
             option
             for option in options[1:]
             if best.score - option.score <= self.AMBIGUITY_DELTA
+            and option.section_matches == best.section_matches
             and len(option.chunks) == len(best.chunks)
+            and not self._adjacent_single_chunk_options(best, option)
             and {
                 chunk.point_id
                 for chunk in option.chunks
@@ -311,17 +323,40 @@ class GoldenEvidenceBinder:
             if requested != actual:
                 return False
 
-        if evidence.section:
-            requested_section = self._normalize(evidence.section)
-            actual_section = self._normalize(chunk.section or "")
-
-            if (
-                requested_section not in actual_section
-                and actual_section not in requested_section
-            ):
-                return False
-
         return True
+
+    @classmethod
+    def _section_matches(
+        cls,
+        evidence: GoldenEvidence,
+        chunks: tuple[BoundChunk, ...],
+    ) -> bool:
+        if not evidence.section:
+            return False
+
+        requested = cls._normalize(evidence.section)
+        for chunk in chunks:
+            actual = cls._normalize(chunk.section or "")
+            if actual and (requested in actual or actual in requested):
+                return True
+
+        return False
+
+    @staticmethod
+    def _adjacent_single_chunk_options(
+        left: _BindingOption,
+        right: _BindingOption,
+    ) -> bool:
+        if len(left.chunks) != 1 or len(right.chunks) != 1:
+            return False
+
+        left_chunk = left.chunks[0]
+        right_chunk = right.chunks[0]
+        return (
+            left_chunk.document_id == right_chunk.document_id
+            and left_chunk.processing_run_id == right_chunk.processing_run_id
+            and abs(left_chunk.chunk_index - right_chunk.chunk_index) == 1
+        )
 
     @classmethod
     def _text_score(

@@ -14,3 +14,9 @@ class DocxDocumentLoader(BaseDocumentLoader[LlamaParsePage]):
 
     def load(self, file_path: Path) -> list[LlamaParsePage]:
         return self._provider.parse(file_path)
+
+    def submit(self, file_path: Path) -> str:
+        return self._provider.submit(file_path)
+
+    def resume(self, job_id: str) -> list[LlamaParsePage]:
+        return self._provider.resume(job_id)

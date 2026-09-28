@@ -5,6 +5,7 @@ namespace App\Filament\Pages;
 use App\Models\EvaluationRun;
 use App\Services\Admin\AdminAccess;
 use App\Services\Admin\AdminAudit;
+use App\Services\Evaluation\EvaluationResultsWorkbook;
 use Filament\Pages\Page;
 use Illuminate\Support\Collection;
 use Livewire\Attributes\Locked;
@@ -70,6 +71,34 @@ class EvaluationResults extends Page
                 'اختر تشغيلًا مكتملًا يستخدم نفس مجموعة الاختبار والوثائق وقيمة K وإصدار المقاييس.',
             );
         }
+    }
+
+    public function exportExcel()
+    {
+        AdminAccess::authorize(auth()->user());
+
+        $evaluation = EvaluationRun::findOrFail($this->run);
+
+        AdminAudit::record(
+            auth()->id(),
+            'evaluation.export',
+            'evaluation_run',
+            $evaluation->id,
+        );
+
+        return response()->streamDownload(function () use ($evaluation): void {
+            $path = tempnam(sys_get_temp_dir(), 'evaluation-results');
+
+            try {
+                app(EvaluationResultsWorkbook::class)->write($evaluation, $path);
+                readfile($path);
+            } finally {
+                @unlink($path);
+            }
+        }, "evaluation-results-{$evaluation->id}.xlsx", [
+            'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            'X-Content-Type-Options' => 'nosniff',
+        ]);
     }
 
     protected function getViewData(): array

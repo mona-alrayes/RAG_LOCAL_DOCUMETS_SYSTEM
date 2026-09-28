@@ -19,7 +19,7 @@
             >
                 <p
                     @class([
-                        'truncate text-sm font-medium transition',
+                        'authenticated-sidebar-subitem truncate font-medium transition',
                         'text-cyan-300' => $activeDocumentId === $document->id,
                         'text-ice-100' => $activeDocumentId !== $document->id,
                     ])
@@ -47,7 +47,7 @@
             </div>
         </div>
     @empty
-        <p class="px-3 py-3 text-xs leading-5 text-mist-300">
+        <p class="authenticated-sidebar-subitem px-3 py-3 leading-5 text-mist-300">
             لا توجد وثائق بعد.
         </p>
     @endforelse
@@ -56,7 +56,7 @@
         href="{{ route('documents.index') }}"
         wire:navigate
         @class([
-            'flex min-h-10 items-center rounded-lg px-3 py-2 text-xs font-semibold transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cyan-400',
+            'authenticated-sidebar-subitem flex min-h-10 items-center rounded-lg px-3 py-2 font-semibold transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cyan-400',
             'bg-white/5 text-cyan-200' => request()->routeIs('documents.index'),
             'text-cyan-300 hover:bg-white/5 hover:text-cyan-200' => ! request()->routeIs('documents.index'),
         ])

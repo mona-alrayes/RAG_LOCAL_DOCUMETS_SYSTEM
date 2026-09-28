@@ -9,7 +9,7 @@ from app.infrastructure.qdrant.indexer import (
     IndexingContext,
     QdrantDocumentIndexer,
 )
-from app.parsing.base import BaseDocumentLoader
+from app.parsing.base import BaseDocumentLoader, ResumableDocumentLoader
 from app.parsing.checkpoint import ParseCheckpointStore
 from app.parsing.normalization import normalize_llamaparse_pages
 from app.parsing.providers.llamaparse import LlamaParsePage, LlamaParseProvider
@@ -175,6 +175,16 @@ class ProcessDocumentService:
         try:
             if self._parse_checkpoints is None:
                 pages = loader.load(file_path)
+            elif isinstance(loader, ResumableDocumentLoader):
+                pages = self._parse_checkpoints.load(
+                    user_id=request.user_id,
+                    document_id=request.document_id,
+                    run_id=request.processing_run_id,
+                    file_path=file_path,
+                    parser_signature=LlamaParseProvider.CHECKPOINT_SIGNATURE,
+                    submitter=lambda: loader.submit(file_path),
+                    resumer=loader.resume,
+                )
             else:
                 pages = self._parse_checkpoints.load(
                     user_id=request.user_id, document_id=request.document_id,

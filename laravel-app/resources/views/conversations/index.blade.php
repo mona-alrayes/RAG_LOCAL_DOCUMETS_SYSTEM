@@ -4,7 +4,8 @@
     :conversations="$conversations"
 >
     <section
-        class="flex h-[calc(100dvh-4rem)] min-h-0 w-full flex-col bg-navy-950 lg:h-dvh"
+        class="flex h-full min-h-0 w-full flex-col bg-navy-950"
+        data-conversation-viewport
         aria-label="مساحة المحادثات"
     >
         <div class="flex min-h-0 flex-1 items-center justify-center px-6 py-12">
