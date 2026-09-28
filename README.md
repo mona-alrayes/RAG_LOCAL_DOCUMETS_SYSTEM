@@ -75,15 +75,15 @@ docker compose version
 
 Python على Mac: `python3.12 --version`، وعلى Windows: `py -3.12 --version`.
 
-إذا فشل Composer بسبب إضافة PHP، افحص `php --ini` و`php -m`. أهم الإضافات هنا: `pdo_mysql`، `redis`، `mbstring`، `intl`، `gd`، `zip`، `curl`، `fileinfo` وإضافات XML. إضافة PHP Redis تختلف عن خادم Redis الموجود في Docker.
+إذا فشل Composer بسبب إضافة PHP، افحص `php --ini` و`php -m`. أهم الإضافات هنا: `pdo_mysql`، `redis`، `mbstring`، `intl`، `gd`، `zip`، `curl`، `fileinfo` وإضافات XML. اختبارات Laravel تحتاج `pdo_sqlite` أيضاً. إضافة PHP Redis تختلف عن خادم Redis الموجود في Docker.
 
 ## 4. تنزيل المشروع
 
 اختر مجلداً مناسباً مثل `~/Projects` على Mac أو `C:\Projects` على Windows، ثم افتح الطرفية داخله:
 
 ```sh
-git clone https://github.com/mona-alrayes/RAG_LOCAL_DOCUMETS_SYSTEM.git
-cd RAG_LOCAL_DOCUMETS_SYSTEM
+git clone https://github.com/mona-alrayes/RAG-Local-Documents-System.git
+cd RAG-Local-Documents-System
 git switch main
 ```
 
@@ -163,11 +163,14 @@ docker compose ps
 
 ```sh
 php artisan migrate
+php artisan storage:link
 php artisan optimize:clear
 docker compose build security-worker queue-worker ai-local-worker scheduler
 docker compose run --rm security-worker freshclam
 docker compose up -d security-worker queue-worker ai-local-worker scheduler
 ```
+
+أمر `storage:link` مطلوب مرة واحدة كي تظهر صور الملف الشخصي المرفوعة من صفحة إعدادات الحساب.
 
 الأمر `freshclam` ينزّل توقيعات فحص الملفات؛ يجب أن ينجح قبل رفع الوثائق. البناء والتنزيل الأول قد يستغرقان عدة دقائق. لا تعطّل فحص الملفات إذا فشل تحديث التوقيعات.
 
@@ -182,7 +185,7 @@ cd fastapi-app
 python3.12 -m venv .venv
 source .venv/bin/activate
 python -m pip install --upgrade pip
-python -m pip install -e '.[local-native]'
+python -m pip install -e '.[local-native,test]'
 cp .env.example .env
 ```
 
@@ -192,7 +195,7 @@ cp .env.example .env
 cd fastapi-app
 py -3.12 -m venv .venv
 .\.venv\Scripts\python.exe -m pip install --upgrade pip
-.\.venv\Scripts\python.exe -m pip install -e '.[local-native]'
+.\.venv\Scripts\python.exe -m pip install -e '.[local-native,test]'
 Copy-Item .env.example .env
 ```
 
@@ -204,6 +207,7 @@ Copy-Item .env.example .env
 
 ```dotenv
 RAG_DEPLOYMENT_MODE=local
+LOG_FORMAT=pretty
 LOCAL_AI_TOPOLOGY=host_native
 LOCAL_DEVICE=auto
 LOCAL_DTYPE=auto
@@ -247,7 +251,7 @@ RAG_GENERATION_MAX_TOKENS=768
 
 LlamaParse مطلوب لمعالجة الملفات في كلا المسارين. Jina وHugging Face مطلوبان للمسار السحابي. لا تحتاج شراء مفتاح من OpenAI لتشغيل الإعداد الحالي.
 
-**إذا أردت المسار السحابي بدلاً من المحلي:** اضبط `RAG_DEPLOYMENT_MODE=cloud` و`RAG_GENERATION_PROFILE=cloud`، وأضف المفاتيح الثلاثة، ثم **احذف أو علّق `LOCAL_AI_TOPOLOGY`**. لا تحتاج Ollama، ويمكن تثبيت Python بـ`pip install -e .` دون `local-native`. تبقى بقية الخدمات وقيم الاتصال مطلوبة.
+**إذا أردت المسار السحابي بدلاً من المحلي:** اضبط `RAG_DEPLOYMENT_MODE=cloud` و`RAG_GENERATION_PROFILE=cloud`، وأضف المفاتيح الثلاثة، ثم **احذف أو علّق `LOCAL_AI_TOPOLOGY`**. لا تحتاج Ollama، ويمكن تثبيت Python بـ`pip install -e '.[test]'` دون `local-native`. تبقى بقية الخدمات وقيم الاتصال مطلوبة.
 
 ## 7. تشغيل Ollama والنموذج المحلي
 
@@ -351,7 +355,7 @@ php artisan queue:restart
 
 **ملاحظة الإعداد الحالي:** عند مراجعة ملفات البيئة كانت قيمة البريد `MAIL_MAILER=log`، أي تسجل الرسائل ولا ترسلها إلى Gmail. يلزم إدخال حسابك وApp Password وتغييرها إلى `smtp` لتفعيل الإرسال الحقيقي. لا توجد بيانات Gmail شخصية في ملفات المثال.
 
-### التحقق من التفعيل
+### اختبار التفعيل
 
 1. افتح `http://rag.test/register` وسجّل حساباً ببريد تستطيع قراءته.
 2. افتح رسالة التفعيل في Inbox أو Spam.
@@ -378,6 +382,9 @@ python -m uvicorn app.main:app --host 127.0.0.1 --port 8001
 ```
 
 شغّل نسخة واحدة من FastAPI؛ لا تستخدم عدة workers للنماذج المحلية.
+
+يعرض `LOG_FORMAT=pretty` السجلات كسطور ملوّنة ومقروءة في الترمينال.
+استخدم `LOG_FORMAT=json` فقط عند إرسال السجلات إلى نظام تجميع آلي.
 
 ### تشغيل التقييم على جهاز بذاكرة 16 GB
 

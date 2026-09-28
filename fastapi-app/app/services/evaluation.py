@@ -25,7 +25,9 @@ from app.services.retrieval_pipeline import (
     RetrievalPipeline,
 )
 
-RAG_PROMPT_VERSION = "rag-answer-v1"
+# نغيّر الإصدار كي تظهر فروق تعليمات الإجابة في مقارنة التقييمات.
+# تعليمات المخططات عند الطلب جزء من v4؛ يجب مزامنة عقد Laravel مع هذا الإصدار.
+RAG_PROMPT_VERSION = "rag-answer-v4"
 RETRIEVAL_METRIC_VERSION = "binary-chunk-v1"
 
 

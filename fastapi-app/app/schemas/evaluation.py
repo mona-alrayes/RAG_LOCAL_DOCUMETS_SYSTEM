@@ -142,6 +142,15 @@ class RetrievalMetrics(BaseModel):
     ndcg_at_k: float | None = Field(default=None, ge=0, le=1)
 
 
+class CorrectnessCheck(BaseModel):
+    # نحتفظ باقتباسين قابلين للتدقيق بدلاً من درجة بلا دليل على المطابقة.
+    model_config = ConfigDict(extra="forbid")
+
+    reference_quote: str = Field(min_length=1, max_length=20000)
+    status: Literal["supported", "partial", "missing", "contradicted"]
+    answer_quote: str | None = Field(default=None, max_length=40000)
+
+
 class JudgeMetric(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -149,6 +158,7 @@ class JudgeMetric(BaseModel):
     score: float | None = Field(default=None, ge=0, le=1)
     reason_code: str | None = Field(default=None, max_length=100)
     short_reason: str | None = Field(default=None, max_length=1000)
+    checks: list[CorrectnessCheck] = Field(default_factory=list, max_length=12)
 
 
 class GenerationMetrics(BaseModel):

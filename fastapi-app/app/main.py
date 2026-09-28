@@ -30,7 +30,7 @@ from app.runtime.state import local_model_coordinator_state, local_runtime_state
 def create_app() -> FastAPI:
     settings = get_settings()
 
-    configure_logging()
+    configure_logging(settings.log_format)
 
     @asynccontextmanager
     async def lifespan(_: FastAPI) -> AsyncIterator[None]:

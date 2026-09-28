@@ -92,14 +92,16 @@ class EvaluationResponse
             'config_snapshot.answer_provider' => 'nullable|string|max:255',
             'config_snapshot.answer_model' => 'nullable|string|max:255',
             'config_snapshot.answer_temperature' => 'required|numeric|min:0|max:2',
-            'config_snapshot.answer_prompt_version' => 'required|in:rag-answer-v1',
+            // نقبل الإصدارات السابقة خلال الانتقال، ونحفظ الإصدار الفعلي للمقارنة.
+            // v4 يضيف المخططات عند الطلب؛ لا نرفض نتائج الفروع أو الإصدارات السابقة.
+            'config_snapshot.answer_prompt_version' => 'required|in:rag-answer-v1,rag-answer-v2,rag-answer-v3,rag-answer-v4',
             'config_snapshot.answer_prompt_sha256' => 'required|string|size:64',
 
             'config_snapshot.judge_provider' => 'nullable|string|max:255',
             'config_snapshot.judge_model' => 'nullable|string|max:255',
             'config_snapshot.judge_temperature' => 'required|numeric|min:0|max:2',
 
-            'config_snapshot.correctness_rubric_version' => 'required|in:correctness-v1',
+            'config_snapshot.correctness_rubric_version' => 'required|in:correctness-v1,correctness-v2',
             'config_snapshot.faithfulness_rubric_version' => 'required|in:faithfulness-v1',
             'config_snapshot.answer_relevance_rubric_version' => 'required|in:answer-relevance-v1',
             'config_snapshot.abstention_rubric_version' => 'required|in:abstention-v1',
@@ -139,6 +141,16 @@ class EvaluationResponse
 
         $rules['retrieved.*.retrieval_score'] = 'required|numeric';
         $rules['retrieved.*.reranker_score'] = 'nullable|numeric';
+
+        // نحفظ أدلة مطابقة المرجع في judge_details دون الحاجة إلى عمود جديد.
+        $checks = 'generation_metrics.correctness.checks';
+        $requiresChecks = ($payload['config_snapshot']['correctness_rubric_version'] ?? null) === 'correctness-v2'
+            && ($payload['generation_metrics']['correctness']['status'] ?? null) === 'completed';
+        $rules[$checks] = $requiresChecks ? 'required|array|min:1|max:12' : 'sometimes|array|max:12';
+        $rules["$checks.*"] = 'array:reference_quote,status,answer_quote';
+        $rules["$checks.*.reference_quote"] = 'required|string|max:20000';
+        $rules["$checks.*.status"] = 'required|in:supported,partial,missing,contradicted';
+        $rules["$checks.*.answer_quote"] = 'present|nullable|string|max:40000';
 
         $validator = Validator::make($payload, $rules);
 

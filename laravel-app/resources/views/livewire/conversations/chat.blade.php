@@ -56,7 +56,8 @@
             </div>
         @else
             <div
-                class="mx-auto flex w-full max-w-3xl flex-col gap-7"
+                data-conversation-column
+                class="conversation-reading-column mx-auto flex flex-col gap-7"
             >
                 @foreach ($messages as $message)
                     @php
@@ -183,11 +184,50 @@
                             ? 'w-full'
                             : 'me-auto max-w-[85%]' }}"
                     >
-                        <div
-                            class="{{ $isAssistant
-                                ? 'px-1 py-2 text-ice-100'
-                                : 'rounded-3xl bg-white/10 px-4 py-3 text-ice-100' }}"
-                        >
+                        <div class="flex items-start gap-3">
+                            @if ($isAssistant)
+                                <span
+                                    data-ai-avatar="robot"
+                                    data-message-avatar="assistant"
+                                    role="img"
+                                    aria-label="مساعد الذكاء الاصطناعي"
+                                    class="conversation-avatar mt-1 inline-flex shrink-0 items-center justify-center rounded-full border border-cyan-400/25 bg-cyan-400/10 text-cyan-300 shadow-[0_0_18px_rgba(0,229,255,0.1)]"
+                                >
+                                    <svg
+                                        viewBox="0 0 24 24"
+                                        class="conversation-avatar-icon"
+                                        fill="none"
+                                        stroke="currentColor"
+                                        stroke-width="1.8"
+                                        aria-hidden="true"
+                                    >
+                                        <path
+                                            stroke-linecap="round"
+                                            stroke-linejoin="round"
+                                            d="M12 2.5V5m-5.25.5h10.5A2.75 2.75 0 0 1 20 8.25v8.5a2.75 2.75 0 0 1-2.75 2.75H6.75A2.75 2.75 0 0 1 4 16.75v-8.5A2.75 2.75 0 0 1 6.75 5.5Z"
+                                        />
+                                        <path
+                                            stroke-linecap="round"
+                                            stroke-linejoin="round"
+                                            d="M8 11h.01M16 11h.01M8.5 15.25h7M4 10H2.75M21.25 10H20"
+                                        />
+                                    </svg>
+                                </span>
+                            @else
+                                <x-user-avatar
+                                    :user="auth()->user()"
+                                    size="chat"
+                                    data-message-avatar="user"
+                                    class="mt-1"
+                                />
+                            @endif
+
+                            <div class="min-w-0 flex-1">
+                                <div
+                                    class="{{ $isAssistant
+                                        ? 'px-1 py-2 text-ice-100'
+                                        : 'rounded-3xl bg-white/10 px-4 py-3 text-ice-100' }}"
+                                >
                             @if (
                                 $isAssistant
                                 && $isPending
@@ -200,7 +240,8 @@
                                     aria-live="polite"
                                     aria-atomic="false"
                                     aria-busy="true"
-                                    class="conversation-markdown text-sm leading-7 text-mist-300"
+                                    data-conversation-text
+                                    class="conversation-markdown conversation-text text-mist-300"
                                 >جاري إعداد الإجابة...</div>
                             @elseif (
                                 $isAssistant
@@ -208,21 +249,69 @@
                             )
                                 <p
                                     role="alert"
-                                    class="whitespace-pre-wrap break-words text-sm leading-7"
+                                    data-conversation-text
+                                    class="conversation-text whitespace-pre-wrap break-words"
                                 >تعذر إنشاء الإجابة.</p>
                             @elseif ($isAssistant)
                                 <div
                                     wire:key="conversation-completed-content-{{ $message->id }}"
                                     data-assistant-markdown
                                     data-markdown-source="{{ $message->content }}"
-                                    class="conversation-markdown text-sm leading-7"
+                                    data-message-copy-source="{{ $message->content }}"
+                                    data-conversation-text
+                                    class="conversation-markdown conversation-text"
                                 >{{ $message->content }}</div>
                             @else
                                 <p
-                                    class="whitespace-pre-wrap break-words text-sm leading-7"
+                                    data-message-copy-source="{{ $message->content }}"
+                                    data-conversation-text
+                                    class="conversation-text whitespace-pre-wrap break-words"
                                 >{{ $message->content }}</p>
                             @endif
-                        </div>
+                                </div>
+
+                                {{-- النسخ للرسائل المكتملة فقط، ومن النص الأصلي دون المصادر والتوقيت. --}}
+                                @if ($isCompleted)
+                                    <div data-copy-ui class="mt-1 flex items-center">
+                                        <button
+                                            type="button"
+                                            data-copy-message
+                                            aria-label="نسخ الرسالة"
+                                            title="نسخ الرسالة"
+                                            class="conversation-copy-button"
+                                        >
+                                            <svg
+                                                data-copy-icon
+                                                viewBox="0 0 24 24"
+                                                fill="none"
+                                                stroke="currentColor"
+                                                stroke-width="1.7"
+                                                aria-hidden="true"
+                                            >
+                                                <rect x="8.25" y="8.25" width="11" height="11" rx="2" />
+                                                <path stroke-linecap="round" d="M15.75 8.25V6.5a2 2 0 0 0-2-2H6.5a2 2 0 0 0-2 2v7.25a2 2 0 0 0 2 2h1.75" />
+                                            </svg>
+
+                                            <svg
+                                                data-copy-success-icon
+                                                viewBox="0 0 24 24"
+                                                fill="none"
+                                                stroke="currentColor"
+                                                stroke-width="2"
+                                                aria-hidden="true"
+                                                hidden
+                                            >
+                                                <path stroke-linecap="round" stroke-linejoin="round" d="m5 12.5 4.25 4.25L19 7" />
+                                            </svg>
+
+                                            <span
+                                                data-copy-feedback
+                                                aria-live="polite"
+                                                class="sr-only"
+                                            >نسخ الرسالة</span>
+                                        </button>
+                                    </div>
+                                @endif
 
                         @if (
                             $isAssistant
@@ -570,7 +659,7 @@
                                                 </span>
 
                                                 <span
-                                                    class="text-left font-mono text-[11px] leading-5 text-mist-200"
+                                                    class="conversation-caption text-left font-mono leading-5 text-mist-200"
                                                     dir="ltr"
                                                 >
                                                     Dense + Sparse → RRF → Reranker
@@ -581,6 +670,8 @@
                                 </div>
                             </details>
                         @endif
+                            </div>
+                        </div>
                     </article>
                 @endforeach
             </div>
@@ -593,12 +684,13 @@
         <form
             wire:submit="ask"
             data-conversation-composer
+            data-conversation-column
             x-data
             x-init="window.initializeConversationComposer($el)"
-            class="mx-auto w-full max-w-3xl"
+            class="conversation-reading-column mx-auto"
         >
             <div
-                class="flex items-end gap-2 rounded-[1.75rem] border border-white/10 bg-navy-900/95 p-2 shadow-2xl shadow-black/20 transition focus-within:border-cyan-400/30"
+                class="conversation-composer-shell flex items-center rounded-[1.75rem] border border-white/10 bg-navy-900/95 shadow-2xl shadow-black/20 transition focus-within:border-cyan-400/30"
             >
                 <label
                     for="conversation-question"
@@ -617,7 +709,7 @@
                         aria-invalid="true"
                         aria-describedby="conversation-question-error"
                     @enderror
-                    class="min-h-11 flex-1 resize-none border-0 bg-transparent px-3 py-2.5 text-sm leading-6 text-ice-100 outline-none placeholder:text-mist-500 focus:ring-0"
+                    class="conversation-composer-input flex-1 resize-none border-0 bg-transparent text-ice-100 outline-none placeholder:text-mist-500 focus:ring-0"
                 ></textarea>
 
                 <button
@@ -646,7 +738,7 @@
                 </button>
             </div>
 
-            <p class="mt-2 px-3 text-center text-[11px] text-mist-500">
+            <p class="conversation-caption mt-2 px-3 text-center text-mist-500">
                 Enter للإرسال · Shift + Enter لسطر جديد
             </p>
 

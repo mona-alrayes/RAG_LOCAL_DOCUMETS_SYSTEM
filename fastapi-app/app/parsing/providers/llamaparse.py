@@ -13,7 +13,9 @@ class LlamaParsePage:
 
 
 class LlamaParseProvider(BaseParsingProvider[LlamaParsePage]):
-    CHECKPOINT_SIGNATURE = "llamaparse-agentic-latest-ar-en-markdown-v1"
+    CHECKPOINT_SIGNATURE = (
+        "llamaparse-agentic-plus-cost-optimizer-latest-ar-en-markdown-v2"
+    )
 
     def __init__(
         self,
@@ -40,15 +42,18 @@ class LlamaParseProvider(BaseParsingProvider[LlamaParsePage]):
         self._client = LlamaCloud(api_key=api_key, max_retries=0)
 
     def parse(self, file_path: Path) -> list[LlamaParsePage]:
+        return self.resume(self.submit(file_path))
+
+    def submit(self, file_path: Path) -> str:
         cloud_file = self._client.files.create(
             file=file_path,
             purpose="parse",
             timeout=self._upload_timeout_seconds,
         )
 
-        parse_result = self._client.parsing.parse(
+        job = self._client.parsing.create(
             file_id=cloud_file.id,
-            tier="agentic",
+            tier="agentic_plus",
             version="latest",
             output_options={
                 "markdown": {
@@ -58,12 +63,25 @@ class LlamaParseProvider(BaseParsingProvider[LlamaParsePage]):
                 }
             },
             processing_options={
+                "cost_optimizer": {
+                    "enable": True,
+                },
                 "ocr_parameters": {
                     "languages": ["ar", "en"],
                 }
             },
-            expand=["markdown"],
+        )
+
+        return job.id
+
+    def resume(self, job_id: str) -> list[LlamaParsePage]:
+        self._client.parsing.wait_for_completion(
+            job_id,
             timeout=self._parse_timeout_seconds,
+        )
+        parse_result = self._client.parsing.get(
+            job_id,
+            expand=["markdown"],
         )
 
         pages = parse_result.markdown.pages

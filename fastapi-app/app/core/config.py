@@ -1,6 +1,7 @@
 from enum import StrEnum
 from functools import lru_cache
 from pathlib import Path
+from typing import Literal
 
 from pydantic import Field, SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -43,6 +44,7 @@ class Settings(BaseSettings):
 
     app_name: str = "RAG AI Service"
     app_version: str = "0.1.0"
+    log_format: Literal["pretty", "json"] = "pretty"
 
     rag_deployment_mode: DeploymentMode = DeploymentMode.LOCAL
     local_ai_topology: LocalAiTopology | None = None

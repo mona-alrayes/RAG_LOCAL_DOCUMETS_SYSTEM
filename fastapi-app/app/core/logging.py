@@ -1,5 +1,6 @@
 import json
 import logging
+import os
 import re
 from contextvars import ContextVar, Token
 from datetime import UTC, datetime
@@ -55,9 +56,71 @@ class JsonFormatter(logging.Formatter):
         return json.dumps(payload, ensure_ascii=False)
 
 
-def configure_logging(level: int = logging.INFO) -> None:
+class PrettyFormatter(logging.Formatter):
+    _RESET = "\x1b[0m"
+    _LEVEL_COLORS = {
+        logging.DEBUG: "\x1b[36m",
+        logging.INFO: "\x1b[32m",
+        logging.WARNING: "\x1b[33m",
+        logging.ERROR: "\x1b[31m",
+        logging.CRITICAL: "\x1b[1;31m",
+    }
+
+    def __init__(self, *, use_colors: bool = False) -> None:
+        super().__init__()
+        self.use_colors = use_colors
+
+    def format(self, record: logging.LogRecord) -> str:
+        timestamp = datetime.fromtimestamp(record.created).astimezone().strftime(
+            "%H:%M:%S"
+        )
+        level = f"{record.levelname:<8}"
+        logger_name = f"{record.name:<24}"
+        message = _redact_credentials(record.getMessage())
+        correlation_id = get_correlation_id()
+        correlation = (
+            f"  correlation_id={correlation_id}" if correlation_id else ""
+        )
+
+        if self.use_colors:
+            color = self._LEVEL_COLORS.get(record.levelno, "")
+            level = f"{color}{level}{self._RESET}"
+
+        rendered = (
+            f"{timestamp}  {level}  {logger_name}  {message}{correlation}"
+        )
+
+        if record.exc_info and record.exc_info[0] is not None:
+            traceback = _redact_credentials(self.formatException(record.exc_info))
+            indented_traceback = "\n".join(
+                f"           {line}" for line in traceback.splitlines()
+            )
+            rendered = f"{rendered}\n{indented_traceback}"
+
+        if self.use_colors:
+            rendered = f"{rendered}{self._RESET}"
+
+        return rendered
+
+
+def configure_logging(
+    log_format: str | None = None,
+    level: int = logging.INFO,
+) -> None:
     handler = logging.StreamHandler()
-    handler.setFormatter(JsonFormatter())
+    selected_format = (
+        log_format or os.getenv("LOG_FORMAT", "pretty")
+    ).strip().lower()
+    if selected_format == "json":
+        formatter: logging.Formatter = JsonFormatter()
+    else:
+        stream_supports_colors = bool(
+            hasattr(handler.stream, "isatty") and handler.stream.isatty()
+        )
+        formatter = PrettyFormatter(
+            use_colors=stream_supports_colors and "NO_COLOR" not in os.environ
+        )
+    handler.setFormatter(formatter)
 
     root_logger = logging.getLogger()
     root_logger.handlers.clear()
